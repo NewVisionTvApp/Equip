@@ -1,38 +1,26 @@
 # Project Status (STATUS.md)
 
-**Current Milestone:** Milestone 3 - Public Registration & Authentication Flow (Phase 3)  
+**Current Milestone:** Milestone 4 - Admin Directory & Attendance Tracking (Phase 4)  
 **Last Updated:** 2026-11-19
 
 ## Summary of Recent Progress
-- **Phase 1 Complete:**
-  - Initialized project scaffolding with React 19, Vite, Tailwind CSS, TypeScript, Better Auth, Drizzle ORM, and Wrangler (`package.json`, `tsconfig.json`, `wrangler.jsonc`, `drizzle.config.ts`, `vite.config.ts`).
-  - Successfully installed dependencies and approved build scripts with `pnpm`.
-- **Phase 2 Complete (Core Data Layer & Relational Schemas):**
-  - Implemented complete Drizzle schema in [src/db/schema.ts](file:///c:/Users/DELL/Equip/src/db/schema.ts) with Better Auth tables (`user`, `session`, `account`, `verification`) and domain tables (`participants`, `events`, `registrations`, `session_attendance`).
-  - Configured Better Auth server handler in [src/lib/auth.ts](file:///c:/Users/DELL/Equip/src/lib/auth.ts) and client in [src/lib/auth-client.ts](file:///c:/Users/DELL/Equip/src/lib/auth-client.ts) with Cloudflare Pages Function route at `functions/api/auth/[[catchall]].ts`.
-  - Built [src/lib/id-generator.ts](file:///c:/Users/DELL/Equip/src/lib/id-generator.ts) generating collision-safe, unambiguous 5-character Unique Participant IDs (`EQ-XXXXX`).
-  - Created [src/db/seed-data.ts](file:///c:/Users/DELL/Equip/src/db/seed-data.ts) containing 10 realistic synthetic participant profiles (pastors & members) and the inaugural event `2026-12-EQUIP`.
-  - Generated initial SQL migration: `drizzle/migrations/0000_supreme_gwen_stacy.sql`.
-  - Verified `pnpm run typecheck` passes with zero errors.
-
-- **Design System & Premium Dashboard Elevation (Phase 2):**
-  - Designed the complete design system, tokens, and artboards in Paper via `paper-design` MCP.
-  - Completed Impeccable Design Audit ([docs/AUDIT_DASHBOARD.md](file:///c:/Users/DELL/Equip/docs/AUDIT_DASHBOARD.md)), elevating score to a perfect **20/20**.
-  - Executed Apple Design uplift on [src/components/Dashboard.tsx](file:///c:/Users/DELL/Equip/src/components/Dashboard.tsx):
-    - **Apple Typography**: Integrated **Plus Jakarta Sans** and **JetBrains Mono** via Google Fonts with tight optical tracking (`tracking-[-0.03em]` to `[-0.04em]`) and `tabular-nums` for crisp numeric scanability.
-    - **Translucent Materials & Depth**: Added frosted glass backdrops (`bg-white/85 backdrop-blur-xl`), hairline border rings (`ring-1 ring-black/[0.02]`), and Apple ambient occlusion drop shadows (`shadow-apple-card hover:shadow-apple-card-hover`).
-    - **Spring Physics & Micro-Animations**:
-      - Apple instant pointer press response: `active:scale-[0.97]` across all interactive cards, pills, buttons, and rows.
-      - Apple Watch style semi-circular SVG arc with spring sweep transition (`transition-[stroke-dashoffset] duration-700 ease-apple-spring`).
-      - Session pillar capsules with smooth height transitions and spring hover lift.
-      - iOS segmented control for roster filtering (`All`, `Pastors`, `Members`, `Checked In`).
-      - Visual check-in pulse ring and synthesized Web Audio micro-chime on check-in and pass verification.
+- **Phase 1 Complete:** Project scaffolding and documentation suite.
+- **Phase 2 Complete:** Core Drizzle relational schemas, D1 migration, Crockford Base30 ID generator (`EQ-XXXXX`), seed data, and Apple-uplifted Admin Dashboard.
+- **Phase 3 Complete (Public Registration & Authentication Flow):**
+  - Built [src/components/RegistrationFlow.tsx](file:///c:/Users/DELL/Equip/src/components/RegistrationFlow.tsx) following Apple Design and `DESIGN.md` guidelines.
+  - Implemented 3 interactive registration pathways:
+    1. **New Attendee Registration**: Clergy vs. General Delegate selection, title & ministerial office configuration, affiliated church, location, and phone number validation.
+    2. **Returning Attendee Fast Lookup**: Instant search by phone or Unique ID (`EQ-XXXXX`) with 1-click renewal for the current monthly gathering.
+    3. **Account Sign In**: Email/password authentication integrated with Better Auth client.
+  - Implemented **Apple Wallet Style Ministerial Pass Card**:
+    - High-contrast Crockford Base30 Unique ID display with 1-tap copy and haptic audio confirmation.
+    - Official winged Equip 3.0 branding, QR door verification mark, and 5-session door access authorization.
+  - Wired into [src/App.tsx](file:///c:/Users/DELL/Equip/src/App.tsx) with seamless routing between Admin Dashboard and Public Registration View.
   - Verified `pnpm run typecheck` and Impeccable mechanical detector pass with **0 defects**.
 
 ## Next Step
-- **Phase 3: Public Registration & Authentication Flow (Vertical Slice 1):**
-  - `TASK-011`: Build Email Sign-Up & Sign-In UI with Better Auth (responsive forms, error states).
-  - `TASK-012`: Build Profile completion & monthly event registration form following `DESIGN.md`.
-  - `TASK-013`: Build registration confirmation view displaying copyable Unique ID (`EQ-XXXXX`) and event pass.
-  - `TASK-014`: Implement quick re-registration for returning attendees.
+- **Phase 4: Admin Directory & Multi-Session Attendance Tracking (Vertical Slice 2):**
+  - `TASK-014`: Build Full-Screen Admin Participant Directory with multi-field search and filters (Ordained vs Delegates).
+  - `TASK-015`: Build Dedicated Multi-Session Attendance UI for ushers across all 5 sessions (Mon AM/PM, Tue AM/PM, Wed PM).
+  - `TASK-016`: Enhance CSV export feature with session breakdown columns and attendance timestamps.
 - **Rule reminder:** No local or cloud builds will be executed without prior explicit user consent.

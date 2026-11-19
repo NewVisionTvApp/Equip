@@ -15,10 +15,10 @@
 - [x] TASK-010: Create synthetic seed data script with 10 realistic sample participants (pastors and members).
 
 ## Phase 3: Public Registration & Authentication Flow (Vertical Slice 1)
-- [ ] TASK-011: Build Email Sign-Up & Sign-In UI with Better Auth (responsive forms, error states).
-- [ ] TASK-012: Build Profile completion & monthly event registration form following `DESIGN.md`.
-- [ ] TASK-013: Build registration confirmation view displaying copyable Unique ID and event pass.
-- [ ] TASK-014: Implement quick re-registration for returning authenticated attendees.
+- [x] TASK-011: Build Email Sign-Up & Sign-In UI with Better Auth (responsive forms, error states).
+- [x] TASK-012: Build Profile completion & monthly event registration form following `DESIGN.md`.
+- [x] TASK-013: Build registration confirmation view displaying copyable Unique ID and event pass.
+- [x] TASK-014: Implement quick re-registration for returning authenticated attendees.
 
 ## Phase 4: Admin Directory & Attendance Tracking (Vertical Slice 2)
 - [ ] TASK-014: Build Admin Directory UI with search by Name, Phone, and Unique ID.
