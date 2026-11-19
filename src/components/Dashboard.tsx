@@ -102,7 +102,15 @@ const DELEGATIONS = [
   { name: "Redeemed Glory Center", count: 22, dot: "bg-emerald-500", type: "Visiting Delegation" },
 ];
 
-export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () => void }) {
+export default function Dashboard({
+  onRegisterClick,
+  onDirectoryClick,
+  onSessionsClick,
+}: {
+  onRegisterClick?: () => void;
+  onDirectoryClick?: () => void;
+  onSessionsClick?: () => void;
+}) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSessionKey, setSelectedSessionKey] = useState("mon_pm");
   const [activeFilterTab, setActiveFilterTab] = useState<"all" | "pastors" | "members" | "checked_in">("all");
@@ -330,6 +338,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
 
               <button
                 type="button"
+                onClick={onDirectoryClick}
                 className="flex items-center justify-between px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left group"
               >
                 <div className="flex items-center gap-3">
@@ -343,6 +352,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
 
               <button
                 type="button"
+                onClick={onSessionsClick}
                 className="flex items-center justify-between px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left group"
               >
                 <div className="flex items-center gap-3">
@@ -431,6 +441,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
           </div>
           <button
             type="button"
+            onClick={onSessionsClick}
             className="w-full h-8 bg-gradient-to-r from-[#166534] to-[#15803d] hover:brightness-110 active:scale-[0.96] text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-150 ease-apple-spring z-10 shadow-xs"
           >
             <Smartphone className="w-3.5 h-3.5" />
@@ -699,7 +710,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
               </div>
               <button
                 type="button"
-                onClick={() => playHapticAudio()}
+                onClick={onSessionsClick}
                 className="w-full h-9 bg-[#0F472A] hover:bg-[#165A36] active:scale-[0.97] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all duration-150 ease-apple-spring shadow-xs"
               >
                 <Play className="w-3.5 h-3.5 fill-white" />
@@ -747,13 +758,22 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
                     {filteredAttendees.length} Shown
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleExportCSV}
-                  className="text-xs font-bold text-[#166534] hover:underline"
-                >
-                  Export CSV →
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={onDirectoryClick}
+                    className="text-xs font-bold text-[#0F472A] hover:underline"
+                  >
+                    Full Directory →
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportCSV}
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-800"
+                  >
+                    CSV
+                  </button>
+                </div>
               </div>
 
               {/* Apple Pill Segmented Control */}
