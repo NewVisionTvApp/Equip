@@ -8,23 +8,28 @@ import {
   X,
   Copy,
   Check,
+  Printer,
 } from "lucide-react";
 import { SEED_PARTICIPANTS } from "@/db/seed-data";
+import PrintableBadgeModal from "./PrintableBadgeModal";
 
 interface AdminDirectoryProps {
   onBackToDashboard: () => void;
   onOpenRegister: () => void;
   onOpenSessionAttendance: () => void;
+  activeEventName?: string;
 }
 
 export default function AdminDirectory({
   onBackToDashboard,
   onOpenRegister,
   onOpenSessionAttendance,
+  activeEventName = "Equip December 2026",
 }: AdminDirectoryProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "pastors" | "members" | "host" | "visiting">("all");
   const [selectedParticipant, setSelectedParticipant] = useState<any | null>(null);
+  const [badgeParticipant, setBadgeParticipant] = useState<any | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Expanded attendees with 5-session attendance simulation
@@ -387,17 +392,30 @@ export default function AdminDirectory({
 
                     {/* Actions */}
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedParticipant(p);
-                        }}
-                        className="p-1.5 rounded-lg hover:bg-slate-200/60 text-slate-600 hover:text-slate-900 transition-colors"
-                        title="View Profile Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBadgeParticipant(p);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-slate-200/60 text-slate-600 hover:text-slate-900 transition-colors"
+                          title="Print Delegate Badge / Slip"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedParticipant(p);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-slate-200/60 text-slate-600 hover:text-slate-900 transition-colors"
+                          title="View Profile Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -513,8 +531,19 @@ export default function AdminDirectory({
             <div className="flex items-center gap-3 pt-2">
               <button
                 type="button"
+                onClick={() => {
+                  setBadgeParticipant(selectedParticipant);
+                }}
+                className="flex-1 h-11 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98]"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print Physical Badge / Slip</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setSelectedParticipant(null)}
-                className="w-full h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
+                className="px-5 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
               >
                 Close Profile
               </button>
@@ -522,6 +551,14 @@ export default function AdminDirectory({
           </div>
         </div>
       )}
+
+      {/* Physical Badge Modal */}
+      <PrintableBadgeModal
+        isOpen={Boolean(badgeParticipant)}
+        onClose={() => setBadgeParticipant(null)}
+        participant={badgeParticipant}
+        eventName={activeEventName}
+      />
     </div>
   );
 }

@@ -12,10 +12,13 @@
   - Multi-Session Attendance Desk ([src/components/MultiSessionAttendance.tsx](file:///c:/Users/DELL/Equip/src/components/MultiSessionAttendance.tsx)) for church ushers with live door fast-scanner and 5-session attendance matrix.
 - **Phase 5: Verification & Quality Assurance**:
   - Built automated test suite in [tests/verification.test.ts](file:///c:/Users/DELL/Equip/tests/verification.test.ts) covering ID generation, 10,000 collision-avoidance check, duplicate prevention, returning attendee renewal, and 5-session attendance tracking.
-  - Ran `pnpm test`: **13 tests passed, 0 failures** in 398ms.
+  - Ran `pnpm test`: **13 tests passed, 0 failures** in 238ms.
   - Verified `pnpm run typecheck` (`tsc --noEmit`): **0 errors**.
   - Ran Impeccable mechanical detector across all UI components: **0 defects**.
   - Live dev server running on `http://localhost:3000`.
+- **Operational Enhancements (Non-Tech-Literate Access & Monthly Event Lifecycle)**:
+  - **No-Account / Computer-Illiterate Flow**: Passwordless participation via permanent Crockford Base30 ID (`EQ-XXXXX`) and phone number. On-site assisted registration and printable lanyard delegate slips ([src/components/PrintableBadgeModal.tsx](file:///c:/Users/DELL/Equip/src/components/PrintableBadgeModal.tsx)) with 5-session check-in boxes.
+  - **Admin Monthly Event Switcher & Creator**: Modal ([src/components/EventModal.tsx](file:///c:/Users/DELL/Equip/src/components/EventModal.tsx)) allowing administrators to create upcoming monthly 3-day events (e.g., January 2027, February 2027), initialize the 5 sessions, and switch between months directly from the top navigation bar and dashboard.
 
 ## Next Step
 - User visual review and polish pass of the preview interfaces on [http://localhost:3000](http://localhost:3000).

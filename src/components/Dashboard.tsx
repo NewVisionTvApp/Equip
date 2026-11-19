@@ -102,15 +102,24 @@ const DELEGATIONS = [
   { name: "Redeemed Glory Center", count: 22, dot: "bg-emerald-500", type: "Visiting Delegation" },
 ];
 
+interface DashboardProps {
+  onRegisterClick?: () => void;
+  onDirectoryClick?: () => void;
+  onSessionsClick?: () => void;
+  onOpenEventModal?: () => void;
+  activeEventName?: string;
+  activeEventTheme?: string;
+  activeEventMonthYear?: string;
+}
+
 export default function Dashboard({
   onRegisterClick,
   onDirectoryClick,
   onSessionsClick,
-}: {
-  onRegisterClick?: () => void;
-  onDirectoryClick?: () => void;
-  onSessionsClick?: () => void;
-}) {
+  onOpenEventModal,
+  activeEventTheme = "Apostolic Mantles & Spiritual Leadership",
+  activeEventMonthYear = "December 2026",
+}: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSessionKey, setSelectedSessionKey] = useState("mon_pm");
   const [activeFilterTab, setActiveFilterTab] = useState<"all" | "pastors" | "members" | "checked_in">("all");
@@ -504,15 +513,36 @@ export default function Dashboard({
         {/* Dashboard Title & Quick Action CTAs */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 px-1">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-[-0.03em]">
-              Dashboard
-            </h1>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-[-0.03em]">
+                Dashboard
+              </h1>
+              <button
+                type="button"
+                onClick={onOpenEventModal}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-[#0F472A] border border-emerald-200/80 text-xs font-extrabold hover:bg-emerald-100 transition-all active:scale-95 shadow-2xs"
+                title="Switch or Create Monthly Programme"
+              >
+                <Calendar className="w-3.5 h-3.5 text-[#0F472A]" />
+                <span>{activeEventMonthYear}</span>
+                <span className="text-[10px] text-emerald-600 font-bold">▾ Switch</span>
+              </button>
+            </div>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Plan, prioritize, and track Equip 3.0 gathering attendance with ease.
+              Active Programme: <strong className="text-slate-700">{activeEventTheme}</strong>
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              type="button"
+              onClick={onOpenEventModal}
+              className="h-10 px-3.5 bg-white/90 hover:bg-slate-50 active:scale-[0.96] text-slate-800 border border-slate-200/80 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-apple-card transition-all duration-200 ease-apple-spring"
+            >
+              <Calendar className="w-4 h-4 text-[#0F472A]" />
+              <span>Programme Events</span>
+            </button>
+
             <button
               type="button"
               onClick={onRegisterClick}

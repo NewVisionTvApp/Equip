@@ -17,22 +17,27 @@ import {
   Smartphone,
   ShieldCheck,
   Search,
+  Printer,
 } from "lucide-react";
 import { generateParticipantId } from "@/lib/id-generator";
 import { authClient } from "@/lib/auth-client";
 import { SEED_PARTICIPANTS, SyntheticParticipantSeed } from "@/db/seed-data";
+import PrintableBadgeModal from "./PrintableBadgeModal";
 
 interface RegistrationFlowProps {
   onBackToDashboard: () => void;
   onParticipantRegistered?: (participant: SyntheticParticipantSeed) => void;
+  activeEventName?: string;
 }
 
 export default function RegistrationFlow({
   onBackToDashboard,
   onParticipantRegistered,
+  activeEventName = "Equip December 2026",
 }: RegistrationFlowProps) {
   // Navigation / View Modes
   const [mode, setMode] = useState<"register" | "returning" | "signin" | "confirmed">("register");
+  const [isPrintBadgeOpen, setIsPrintBadgeOpen] = useState(false);
 
   // Registration Form State
   const [formData, setFormData] = useState({
@@ -64,6 +69,7 @@ export default function RegistrationFlow({
     roleOffice: string;
     churchName: string;
     isOrdained: boolean;
+    location: string;
     date: string;
   } | null>(null);
 
@@ -137,6 +143,7 @@ export default function RegistrationFlow({
         roleOffice: newParticipant.roleOffice,
         churchName: newParticipant.churchName,
         isOrdained,
+        location: newParticipant.location || "Lagos",
         date: "December 7 – 9, 2026",
       });
 
@@ -186,6 +193,7 @@ export default function RegistrationFlow({
       roleOffice: lookupResult.roleOffice,
       churchName: lookupResult.churchName,
       isOrdained,
+      location: lookupResult.location || "Lagos",
       date: "December 7 – 9, 2026",
     });
 
@@ -736,6 +744,16 @@ export default function RegistrationFlow({
               </p>
             </div>
 
+            {/* Print Badge Button for Non-Computer Literate Attendees / Walk-ins */}
+            <button
+              type="button"
+              onClick={() => setIsPrintBadgeOpen(true)}
+              className="w-full h-11 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-apple-card transition-all"
+            >
+              <Printer className="w-4 h-4 text-[#A3E635]" />
+              <span>Print Physical Lanyard Badge / Slip (No Phone Needed)</span>
+            </button>
+
             {/* Action Buttons */}
             <div className="w-full flex items-center gap-3">
               <button
@@ -760,6 +778,14 @@ export default function RegistrationFlow({
           </div>
         )}
       </div>
+
+      {/* Physical Badge Print Modal */}
+      <PrintableBadgeModal
+        isOpen={isPrintBadgeOpen}
+        onClose={() => setIsPrintBadgeOpen(false)}
+        participant={confirmedPass}
+        eventName={activeEventName}
+      />
     </div>
   );
 }
