@@ -2,10 +2,11 @@
 
 ## 0. Paper Design System Canvas
 - **Paper File:** [Equip Design System](https://app.paper.design/file/01M7RYX0QD7C1FN7S8PDT15AG2/p-1-0) (File ID: `01M7RYX0QD7C1FN7S8PDT15AG2`)
-- **Tokens Configured:** 32 Design Tokens (Colors, Spacings, Radii, Font Sizes, Font Families).
+- **Tokens Configured:** 34 Design Tokens (Colors, Spacings, Radii, Font Sizes, Font Families).
 - **Artboards Created:**
   1. `Design System & Foundations` (1440 × 1080px): Brand colors, typography scale, buttons, form inputs, status badges, and Participant ID Pass card.
   2. `Mobile: Registration & Pass` (390 × 844px): Native mobile registration confirmation view with Apple status bar, high-contrast unique ID card (`EQ-82914`), and 5-session schedule preview.
+  3. `Desktop: Admin & Attendance Dashboard` (1440 × 1050px): Full administrative workspace modeled after the modern card & sidebar layout (Donezo style), with dark forest green stat card, 5-session attendance pillar charts, church delegation breakdown, live attendee table, turnout gauge, and session timer.
 
 ---
 
