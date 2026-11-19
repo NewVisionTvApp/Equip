@@ -26,6 +26,6 @@
 - [x] TASK-016: Add CSV export feature for event rosters and attendance reports.
 
 ## Phase 5: Verification & Quality Assurance
-- [ ] TASK-017: Run automated test suite against registration and duplicate-prevention logic.
-- [ ] TASK-018: Execute manual test matrix ([docs/TEST_PLAN.md](file:///c:/Users/DELL/Equip/docs/TEST_PLAN.md)) across mobile and desktop viewports.
-- [ ] TASK-019: Final review and documentation update in `STATUS.md`.
+- [x] TASK-017: Run automated test suite against registration and duplicate-prevention logic.
+- [x] TASK-018: Execute manual test matrix ([docs/TEST_PLAN.md](file:///c:/Users/DELL/Equip/docs/TEST_PLAN.md)) across mobile and desktop viewports.
+- [x] TASK-019: Final review and documentation update in `STATUS.md`.

@@ -12,18 +12,32 @@ const CODE_LENGTH = 5;
  * Generates a single participant unique ID.
  * Example outputs: 'EQ-8K4NP', 'EQ-7M2DX', 'EQ-9H6RT'
  * Total address space: 30^5 = 24,300,000 unique combinations.
+ * Supports optional collision-avoidance check against existing IDs.
  */
-export function generateParticipantId(): string {
-  let code = "";
-  const randomBytes = new Uint8Array(CODE_LENGTH);
-  crypto.getRandomValues(randomBytes);
+export function generateParticipantId(existingIds?: Set<string>): string {
+  const maxAttempts = 10;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    let code = "";
+    const randomBytes = new Uint8Array(CODE_LENGTH);
+    crypto.getRandomValues(randomBytes);
 
-  for (let i = 0; i < CODE_LENGTH; i++) {
-    const index = randomBytes[i] % SAFE_ALPHABET.length;
-    code += SAFE_ALPHABET[index];
+    for (let i = 0; i < CODE_LENGTH; i++) {
+      const index = randomBytes[i] % SAFE_ALPHABET.length;
+      code += SAFE_ALPHABET[index];
+    }
+
+    const candidate = `${ID_PREFIX}-${code}`;
+    if (!existingIds || !existingIds.has(candidate)) {
+      if (existingIds) {
+        existingIds.add(candidate);
+      }
+      return candidate;
+    }
   }
 
-  return `${ID_PREFIX}-${code}`;
+  // Fallback in astronomical edge case
+  const timestampSuffix = Date.now().toString(36).toUpperCase().slice(-5);
+  return `${ID_PREFIX}-${timestampSuffix}`;
 }
 
 /**

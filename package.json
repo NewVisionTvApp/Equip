@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "node --test tests/verification.test.ts",
     "pages:dev": "wrangler pages dev --d1 DB=equip-db --compatibility-date 2024-11-01",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
