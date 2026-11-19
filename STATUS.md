@@ -17,8 +17,10 @@
   - Ran Impeccable mechanical detector across all UI components: **0 defects**.
   - Live dev server running on `http://localhost:3000`.
 - **Operational Enhancements (Non-Tech-Literate Access & Monthly Event Lifecycle)**:
-  - **No-Account / Computer-Illiterate Flow**: Passwordless participation via permanent Crockford Base30 ID (`EQ-XXXXX`) and phone number. On-site assisted registration and printable lanyard delegate slips ([src/components/PrintableBadgeModal.tsx](file:///c:/Users/DELL/Equip/src/components/PrintableBadgeModal.tsx)) with 5-session check-in boxes.
+  - **Unified Reactive Platform Store ([src/lib/store.ts](file:///c:/Users/DELL/Equip/src/lib/store.ts))**: Decoupled persistent participant profiles from monthly event registrations, backed by automatic localStorage persistence and state synchronization across Dashboard, Directory, Attendance Desk, and Registration views.
+  - **No-Account / Computer-Illiterate Flow**: Passwordless participation via permanent Crockford Base30 ID (`EQ-XXXXX`) and phone number. On-site assisted registration and printable lanyard delegate slips ([src/components/PrintableBadgeModal.tsx](file:///c:/Users/DELL/Equip/src/components/PrintableBadgeModal.tsx)) with 5-session check-in boxes, accessible from both Directory and the 5-Session Usher Desk.
   - **Admin Monthly Event Switcher & Creator**: Modal ([src/components/EventModal.tsx](file:///c:/Users/DELL/Equip/src/components/EventModal.tsx)) allowing administrators to create upcoming monthly 3-day events (e.g., January 2027, February 2027), initialize the 5 sessions, and switch between months directly from the top navigation bar and dashboard.
+  - **Usher Door Walk-In Registration**: Ushers at the 5-Session Desk can click `+ Walk-in Registration` to register an attendee and print their lanyard badge in under 15 seconds without leaving their terminal.
 
 ## Next Step
 - User visual review and polish pass of the preview interfaces on [http://localhost:3000](http://localhost:3000).
