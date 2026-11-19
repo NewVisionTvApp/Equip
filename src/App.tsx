@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Dashboard from "./components/Dashboard";
+import RegistrationFlow from "./components/RegistrationFlow";
 
 export default function App() {
   const [view, setView] = useState<"dashboard" | "register">("dashboard");
@@ -41,28 +42,11 @@ export default function App() {
         </div>
       </div>
 
-      {/* Main View */}
+      {/* Main View Router */}
       {view === "dashboard" ? (
         <Dashboard onRegisterClick={() => setView("register")} />
       ) : (
-        <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6">
-          <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center flex flex-col items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-lime-100 text-[#0F472A] flex items-center justify-center font-extrabold text-lg">
-              EQ
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900">Equip 3.0 Registration</h2>
-            <p className="text-xs text-slate-500">
-              Public attendee email sign-up and pass confirmation flow will be implemented in Phase 3.
-            </p>
-            <button
-              type="button"
-              onClick={() => setView("dashboard")}
-              className="mt-4 px-4 py-2 bg-[#0F472A] text-white rounded-xl text-xs font-semibold hover:bg-[#165A36] transition-colors"
-            >
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
+        <RegistrationFlow onBackToDashboard={() => setView("dashboard")} />
       )}
     </div>
   );
