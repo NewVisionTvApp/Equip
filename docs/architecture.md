@@ -5,40 +5,131 @@
 ### Context & Goals
 - Scale: 150 – 200 participants monthly.
 - Longevity: Highly stable, low maintenance, zero-cost or near-zero cost indefinitely.
+- Authentication: Effortless, modern email sign-up and sign-in (magic links, email/password, and session management) without external vendor lock-in.
 - Portability: Independent from TV app, but able to share or interface via API/database relations in the future if desired.
 - Constraint: No database sleeping / pausing issues between monthly intervals.
 
-### Option A: Cloudflare Workers / Pages + Cloudflare D1 (SQL)
-- **Cost:** **$0 / month** (Free tier covers 100,000 requests/day, 5 million D1 reads/day, 100,000 writes/day, and 5 GB storage). At 200 attendees/month, usage will be well under 1% of the free limits.
-- **Downtime / Sleeping:** **Zero.** D1 does not "sleep" or pause due to inactivity, unlike free-tier PaaS Postgres instances.
-- **Ecosystem Alignment:** Since the mobile app already runs on Cloudflare, using Cloudflare (either within the same account or a cleanly separated account) allows direct cross-service bindings, Cloudflare Access (for free, passwordless zero-trust admin login), and unified billing if upgraded in the future.
-- **Stack:** Astro or Next.js / Remix / Hono on Cloudflare Pages/Workers + D1 + Drizzle ORM.
-- **Trade-offs:** D1 is serverless SQLite. For 200–5,000 users, relational SQLite is lightning fast, reliable, and handles transactions cleanly. If massive complex analytical queries across millions of rows are needed down the line, exporting or federating is straightforward.
-
-### Option B: Vercel + Supabase (Managed PostgreSQL)
-- **Cost:** Free tier available, but **Supabase free projects automatically pause after 7 days of inactivity**.
-  - *Risk:* Since this is a **monthly** event, if there is a 2-week quiet period between monthly events, the Supabase database may pause. When the next registration opens, requests will fail or stall until someone manually unpauses it in the dashboard, unless you pay $25/month for the Pro plan.
-- **Admin UI:** Supabase provides an out-of-the-box Table Editor, which is convenient during early testing.
-- **Ecosystem:** Different platform from Cloudflare. Linking with Cloudflare mobile app requires HTTP/REST endpoints rather than native edge bindings.
-
-### Recommendation
-**Cloudflare Pages + D1 (with Drizzle ORM)** is strongly recommended as the best long-term, cost-effective choice:
-1. **Never Pauses:** Continuous availability 365 days a year on the free tier.
-2. **Unified Cloudflare Ecosystem:** Shares the exact same operational and database paradigm as the mobile app.
-3. **Built-in Security:** Admin portal can be secured via Cloudflare Access (email one-time PIN or Google login) for free without writing fragile custom authentication code.
-4. **Clean Codebase:** Modern TypeScript, Drizzle ORM for typed schemas and migrations, and fast edge SSR.
+### Selected Stack: Cloudflare Pages/Workers + D1 + Drizzle ORM + Better Auth
+1. **Hosting & Edge Compute:** Cloudflare Pages / Workers.
+   - Ultra-fast global edge distribution with zero cold starts.
+   - Free tier: 100,000 requests/day.
+2. **Database:** Cloudflare D1 (Serverless Relational SQLite).
+   - Zero-pause architecture: never sleeps or shuts down due to inactivity.
+   - Free tier: 5 million reads/day, 100,000 writes/day, 5 GB storage.
+3. **ORM:** Drizzle ORM.
+   - Type-safe schema definition, automated migrations, and zero-overhead queries.
+4. **Authentication:** **Better Auth** (Native Edge & Drizzle ORM Adapter).
+   - 100% open source TypeScript authentication framework running directly in Cloudflare Workers.
+   - Stores users, sessions, accounts, and email verification tokens directly inside your Cloudflare D1 database.
+   - Supports email & password, magic links, session cookies, and role-based permissions (admin vs. attendee).
+5. **Transactional Emails:** Resend (via HTTPS API).
+   - Sends email verification and magic link/password reset emails.
+   - Free tier: 3,000 emails/month (15x above monthly requirements).
 
 ---
 
-## 2. Proposed Data Schema (Relational)
+## 2. System Architecture Diagram
+
+```
++-------------------------------------------------------------+
+|                      Client Browser                         |
+|   (Mobile-First Responsive UI: Attendee Portal & Admin Hub) |
++------------------------------+------------------------------+
+                               |
+                               v HTTPS
++-------------------------------------------------------------+
+|               Cloudflare Pages / Workers Edge               |
+|                                                             |
+|   +-----------------------+     +-----------------------+   |
+|   |   Public & Admin API  |     |      Better Auth      |   |
+|   |     (Zod Validated)   |     |    (Sessions & Auth)  |   |
+|   +-----------+-----------+     +-----------+-----------+   |
+|               |                             |               |
+|               +--------------+--------------+               |
+|                              |                              |
+|                              v                              |
+|                     Drizzle ORM Layer                       |
++------------------------------+------------------------------+
+                               |
+                               +-----------------------------> Resend API
+                               |                               (Transactional Emails)
+                               v SQL Queries
++-------------------------------------------------------------+
+|                Cloudflare D1 Database (SQLite)              |
+|                                                             |
+|  [Auth Tables]            [Application Tables]              |
+|  - user                   - participants (profiles)         |
+|  - session                - events (monthly instances)      |
+|  - account                - registrations                   |
+|  - verification           - session_attendance (5 sessions) |
++-------------------------------------------------------------+
+```
+
+---
+
+## 3. Relational Database Schema
+
+### A. Better Auth Core Tables (Stored in D1)
 
 ```sql
--- 1. Persistent Participant Profiles
+-- Core user identity created by Better Auth
+CREATE TABLE user (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  email_verified INTEGER NOT NULL DEFAULT 0,
+  image TEXT,
+  role TEXT DEFAULT 'attendee',      -- 'attendee' or 'admin'
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Active user sessions (managed via secure HTTP-only cookies)
+CREATE TABLE session (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,
+  expires_at DATETIME NOT NULL,
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Accounts table for credentials (hashed passwords) or social providers
+CREATE TABLE account (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  account_id TEXT NOT NULL,
+  provider_id TEXT NOT NULL,         -- 'credential', 'google', etc.
+  access_token TEXT,
+  refresh_token TEXT,
+  password TEXT,                     -- securely hashed password
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Email verification tokens and password reset requests
+CREATE TABLE verification (
+  id TEXT PRIMARY KEY,
+  identifier TEXT NOT NULL,          -- email address
+  value TEXT NOT NULL,               -- token / OTP code
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### B. Application Domain Tables (Equip Registration & Attendance)
+
+```sql
+-- Persistent Participant Profiles (linked to Better Auth user)
 CREATE TABLE participants (
-  id TEXT PRIMARY KEY,               -- e.g. 'EQ-82914' (human-friendly unique ID)
+  id TEXT PRIMARY KEY,               -- Human-friendly unique ID: 'EQ-82914'
+  user_id TEXT UNIQUE REFERENCES user(id) ON DELETE SET NULL, -- Linked auth account
   full_name TEXT NOT NULL,
-  phone TEXT NOT NULL UNIQUE,        -- Primary identifier for lookup
-  email TEXT,
+  phone TEXT NOT NULL UNIQUE,        -- Primary contact & lookup key
+  email TEXT,                        -- Synced from user account
   church_name TEXT NOT NULL,         -- Home church
   is_host_church INTEGER DEFAULT 0,  -- 1 = Host church, 0 = Visiting church
   role_office TEXT NOT NULL,         -- e.g. 'Pastor', 'Elder', 'Member', etc.
@@ -47,7 +138,7 @@ CREATE TABLE participants (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Monthly Events
+-- Monthly Event Definitions
 CREATE TABLE events (
   id TEXT PRIMARY KEY,               -- e.g. '2026-12' or 'equip-dec-2026'
   title TEXT NOT NULL,
@@ -57,21 +148,21 @@ CREATE TABLE events (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Event Registrations (Instance per participant per event)
+-- Event Registrations (Instance per participant per monthly event)
 CREATE TABLE registrations (
   id TEXT PRIMARY KEY,               -- UUID or prefixed ID
-  participant_id TEXT NOT NULL REFERENCES participants(id),
-  event_id TEXT NOT NULL REFERENCES events(id),
+  participant_id TEXT NOT NULL REFERENCES participants(id) ON DELETE CASCADE,
+  event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
   registration_type TEXT DEFAULT 'standard',
   registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   status TEXT DEFAULT 'confirmed',   -- 'confirmed', 'cancelled'
-  UNIQUE(participant_id, event_id)   -- Prevents duplicate registration for same event
+  UNIQUE(participant_id, event_id)   -- Strictly prevents duplicate registrations
 );
 
--- 4. Session Attendance (5 sessions per event)
+-- Multi-Session Attendance (5 sessions per event)
 CREATE TABLE session_attendance (
   id TEXT PRIMARY KEY,
-  registration_id TEXT NOT NULL REFERENCES registrations(id),
+  registration_id TEXT NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
   session_key TEXT NOT NULL,         -- 'mon_am', 'mon_pm', 'tue_am', 'tue_pm', 'wed_pm'
   checked_in_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   checked_in_by TEXT,                -- Admin identifier

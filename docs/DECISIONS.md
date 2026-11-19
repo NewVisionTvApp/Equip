@@ -13,22 +13,34 @@
 
 ## ADR-002: Stable Participant Profile Decoupled from Event Registrations
 - **Status:** Approved
-- **Context:** Attendees attend recurring monthly programmes and need to be recognized without forcing them to remember passwords or undergo complex sign-in flows.
+- **Context:** Attendees attend recurring monthly programmes and need to be recognized without forcing them to re-enter their entire profile every month.
 - **Decision:** Split the relational schema into:
   1. `participants`: Persistent master profile with a human-readable unique ID (`EQ-XXXXX`).
   2. `events`: Monthly event definition (e.g. `2026-12`).
   3. `registrations`: Bridge table linking participant to event instance with a unique compound constraint (`participant_id`, `event_id`).
   4. `session_attendance`: Records check-in per session across the 5 event sessions.
 - **Consequences:**
-  - Returning participants can register for future months in seconds using their Unique ID or Phone Number.
+  - Returning participants can register for future months in seconds.
   - Historical attendance across multiple months is cleanly preserved.
 
 ---
 
 ## ADR-003: Passwordless Unique ID & Admin Phone Lookup
 - **Status:** Approved
-- **Context:** Requiring passwords causes high drop-off and friction during church event registration.
-- **Decision:** Use a generated 5-digit Unique ID (e.g. `EQ-82914`) displayed on confirmation and provided via copy/screenshot. If an attendee forgets their ID, administrators can search by Name or Phone in the admin lookup directory.
+- **Context:** Attendees arriving at the event door need rapid verification, even if they forget their ID.
+- **Decision:** Generate a 5-digit Unique ID (e.g. `EQ-82914`) displayed on confirmation and provided via copy/screenshot. If an attendee forgets their ID, administrators can search by Name or Phone in the admin lookup directory.
 - **Consequences:**
-  - Frictionless registration for attendees of all technical backgrounds.
+  - Frictionless verification for attendees of all technical backgrounds.
   - Admin help desk has instant visibility to resolve lookup issues at the door.
+
+---
+
+## ADR-004: Better Auth for Edge Authentication on Cloudflare D1
+- **Status:** Approved
+- **Context:** Users require effortless email sign-up and sign-in (magic links, credentials, session management), but Cloudflare D1 does not offer native managed authentication. We want to avoid third-party auth vendor lock-in and keep all user credentials directly inside our D1 database.
+- **Decision:** Use **Better Auth** with the native Cloudflare D1 and Drizzle ORM adapter. Better Auth stores all user, session, account, and verification data in D1. Transactional emails (verification and magic links) are dispatched via Resend's API.
+- **Consequences:**
+  - 100% open-source and free, with zero MAU pricing limits.
+  - Full data ownership inside our own D1 SQLite database.
+  - Native Edge runtime compatibility with Cloudflare Workers/Pages.
+  - Admin role-based authorization handled natively via Better Auth session roles.

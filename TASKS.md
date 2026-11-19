@@ -6,18 +6,19 @@
 - [x] TASK-003: Download and configure required repository skills (`apple-design`, `caveman`, `icm-architect`, `impeccable`, `ponytail`, `cloudflare`, `wrangler`, `workers-best-practices`).
 - [x] TASK-004: Initialize Git repository and `.gitignore`.
 - [x] TASK-005: Create complete project documentation suite (`PRD.md`, `ARCHITECTURE.md`, `DESIGN.md`, `RULES.md`, `DECISIONS.md`, `TEST_PLAN.md`, `SECURITY.md`, `.env.example`).
-- [ ] TASK-006: Scaffold project dependencies (`package.json`, TypeScript, Tailwind CSS, Drizzle ORM, Wrangler config).
+- [ ] TASK-006: Scaffold project dependencies (`package.json`, TypeScript, Tailwind CSS, Drizzle ORM, Better Auth, Wrangler config).
 
 ## Phase 2: Core Data Layer & Relational Schemas
-- [ ] TASK-007: Define Drizzle schema for `participants`, `events`, `registrations`, and `session_attendance`.
-- [ ] TASK-008: Implement Unique Participant ID generator (e.g. `EQ-XXXXX` with collision detection).
-- [ ] TASK-009: Create synthetic seed data script with 10 realistic sample participants (pastors and members).
+- [ ] TASK-007: Define Drizzle schema for Better Auth tables (`user`, `session`, `account`, `verification`) and domain tables (`participants`, `events`, `registrations`, `session_attendance`).
+- [ ] TASK-008: Configure Better Auth client and server handlers with Cloudflare D1 and Drizzle adapter.
+- [ ] TASK-009: Implement Unique Participant ID generator (e.g. `EQ-XXXXX` with collision detection).
+- [ ] TASK-010: Create synthetic seed data script with 10 realistic sample participants (pastors and members).
 
-## Phase 3: Public Registration Flow (Vertical Slice 1)
-- [ ] TASK-010: Create responsive registration form following `DESIGN.md` and `impeccable` guidelines.
-- [ ] TASK-011: Implement registration API endpoint with Zod validation and D1 database insertion.
-- [ ] TASK-012: Build registration confirmation view displaying copyable Unique ID and event pass.
-- [ ] TASK-013: Implement returning attendee flow (lookup by Phone / Unique ID to quickly confirm current event registration).
+## Phase 3: Public Registration & Authentication Flow (Vertical Slice 1)
+- [ ] TASK-011: Build Email Sign-Up & Sign-In UI with Better Auth (responsive forms, error states).
+- [ ] TASK-012: Build Profile completion & monthly event registration form following `DESIGN.md`.
+- [ ] TASK-013: Build registration confirmation view displaying copyable Unique ID and event pass.
+- [ ] TASK-014: Implement quick re-registration for returning authenticated attendees.
 
 ## Phase 4: Admin Directory & Attendance Tracking (Vertical Slice 2)
 - [ ] TASK-014: Build Admin Directory UI with search by Name, Phone, and Unique ID.

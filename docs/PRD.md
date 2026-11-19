@@ -26,19 +26,13 @@ The programme runs monthly over 3 consecutive days with **5 distinct sessions**:
   - Session 5: Wednesday Afternoon
 
 ## 4. Core Features & User Stories
-### A. Public Registration (New Participant)
-- **Story:** A first-time attendee visits the registration portal, fills out their details, receives a confirmed registration for the current month, and gets a clear, memorable **Unique Participant ID** (e.g., `EQ-74829`).
-- **Required Fields:**
-  - Full Name (text, required)
-  - Phone Number (tel, required, validated format)
-  - Email Address (email, optional / required for confirmation)
-  - Church Name (text, required — host church vs. external church)
-  - Office / Role (select: Pastor, Minister, Elder, Worker, Member, Guest)
-  - Location (text, required — City / Branch / Region)
-- **Output:** Immediate confirmation screen showing their Unique Participant ID and current event confirmation.
+### A. Attendee Email Sign-Up & Sign-In (Powered by Better Auth)
+- **Story:** An attendee can sign up with their email address and password (or request a magic link). They receive an automated email verification link.
+- **Session:** Once signed in, they have persistent access to their profile, their Unique Participant ID (`EQ-XXXXX`), and their monthly registration passes.
+- **First-Time Profile Completion:** Upon initial sign-up, the attendee completes their profile (Full Name, Phone Number, Home Church, Role/Office, Location) which registers them for the current monthly event.
 
 ### B. Quick Re-Registration (Returning Participant)
-- **Story:** A returning attendee enters their Unique ID or registered Phone Number. The system retrieves their profile, confirms their details with one click, and registers them for the upcoming monthly event without re-typing their details.
+- **Story:** When returning for a new monthly event, a signed-in attendee can register with a single click ("Register for this Month's Programme"). If not signed in, they can sign in via email or enter their Unique ID / Phone Number to confirm their registration.
 - **Duplicate Prevention:** Prevents registering twice for the same monthly event while preserving their single master profile.
 
 ### C. Admin Participant Directory & ID Lookup

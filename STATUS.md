@@ -24,6 +24,11 @@
   - [TASKS.md](file:///c:/Users/DELL/Equip/TASKS.md)
   - [.env.example](file:///c:/Users/DELL/Equip/.env.example)
 
+- Integrated **Better Auth** into the system architecture:
+  - Documented in [docs/ARCHITECTURE.md](file:///c:/Users/DELL/Equip/docs/architecture.md) (Architecture diagram, Better Auth D1 schema for `user`, `session`, `account`, `verification`).
+  - Recorded in [docs/DECISIONS.md](file:///c:/Users/DELL/Equip/docs/DECISIONS.md) as **ADR-004**.
+  - Updated [docs/PRD.md](file:///c:/Users/DELL/Equip/docs/PRD.md) and [TASKS.md](file:///c:/Users/DELL/Equip/TASKS.md) with email sign-up/sign-in flows.
+
 ## Next Step
-- Complete Phase 1 setup: Initialize `package.json` and configure project dependencies (Cloudflare Pages/Workers, D1, Drizzle ORM, Tailwind CSS).
+- Phase 1 Scaffolding (`TASK-006`): Configure `package.json`, TypeScript, Tailwind CSS, Drizzle ORM, Better Auth, and Wrangler configuration.
 - **Rule reminder:** No local or cloud builds will be executed without prior explicit user consent.
