@@ -1,5 +1,14 @@
 # Design System & UI Specifications (DESIGN.md)
 
+## 0. Paper Design System Canvas
+- **Paper File:** [Equip Design System](https://app.paper.design/file/01M7RYX0QD7C1FN7S8PDT15AG2/p-1-0) (File ID: `01M7RYX0QD7C1FN7S8PDT15AG2`)
+- **Tokens Configured:** 32 Design Tokens (Colors, Spacings, Radii, Font Sizes, Font Families).
+- **Artboards Created:**
+  1. `Design System & Foundations` (1440 × 1080px): Brand colors, typography scale, buttons, form inputs, status badges, and Participant ID Pass card.
+  2. `Mobile: Registration & Pass` (390 × 844px): Native mobile registration confirmation view with Apple status bar, high-contrast unique ID card (`EQ-82914`), and 5-session schedule preview.
+
+---
+
 ## 1. Design Principles (Impeccable UI)
 - **Clarity & Dignity:** A warm, clean, reverent, and professional aesthetic suitable for a church leadership programme.
 - **Mobile-First Responsiveness:** Over 85% of registrations will occur on mobile devices. Large touch targets (min 44px), legible input fields, and zero horizontal scrolling.
