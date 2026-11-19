@@ -18,11 +18,15 @@
 - **Design System & Premium Dashboard Elevation (Phase 2):**
   - Designed the complete design system, tokens, and artboards in Paper via `paper-design` MCP.
   - Completed Impeccable Design Audit ([docs/AUDIT_DASHBOARD.md](file:///c:/Users/DELL/Equip/docs/AUDIT_DASHBOARD.md)), elevating score to a perfect **20/20**.
-  - Executed Impeccable Pixel-Perfect Polish pass on [src/components/Dashboard.tsx](file:///c:/Users/DELL/Equip/src/components/Dashboard.tsx):
-    - **Harmonized Radius Hierarchy**: Solved over-rounded ballooning by strictly establishing $R_{\text{outer}} = 16\text{px}$ (`rounded-2xl`) for cards, $R_{\text{inner}} = 12\text{px}$ (`rounded-xl`) for controls/buttons/rows, and `rounded-full` for badges/capsules.
-    - **True Donezo 3-Column Grid**: Realigned Middle and Bottom sections into balanced 3-column rows (`5 cols` / `4 cols` / `3 cols`) mirroring the reference architecture.
-    - **Session Pillar Capsules**: Replaced bulky bars with sleek, capsule-shaped pillars featuring floating percentage indicators for active sessions.
-    - **Time Tracker Organic Waves**: Rendered authentic fluid SVG wave ribbons with monospace clock and quick controls.
+  - Executed Apple Design uplift on [src/components/Dashboard.tsx](file:///c:/Users/DELL/Equip/src/components/Dashboard.tsx):
+    - **Apple Typography**: Integrated **Plus Jakarta Sans** and **JetBrains Mono** via Google Fonts with tight optical tracking (`tracking-[-0.03em]` to `[-0.04em]`) and `tabular-nums` for crisp numeric scanability.
+    - **Translucent Materials & Depth**: Added frosted glass backdrops (`bg-white/85 backdrop-blur-xl`), hairline border rings (`ring-1 ring-black/[0.02]`), and Apple ambient occlusion drop shadows (`shadow-apple-card hover:shadow-apple-card-hover`).
+    - **Spring Physics & Micro-Animations**:
+      - Apple instant pointer press response: `active:scale-[0.97]` across all interactive cards, pills, buttons, and rows.
+      - Apple Watch style semi-circular SVG arc with spring sweep transition (`transition-[stroke-dashoffset] duration-700 ease-apple-spring`).
+      - Session pillar capsules with smooth height transitions and spring hover lift.
+      - iOS segmented control for roster filtering (`All`, `Pastors`, `Members`, `Checked In`).
+      - Visual check-in pulse ring and synthesized Web Audio micro-chime on check-in and pass verification.
   - Verified `pnpm run typecheck` and Impeccable mechanical detector pass with **0 defects**.
 
 ## Next Step
