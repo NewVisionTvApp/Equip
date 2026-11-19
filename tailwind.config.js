@@ -37,7 +37,17 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      },
+      transitionTimingFunction: {
+        'apple-spring': 'cubic-bezier(0.16, 1, 0.3, 1)',
+        'apple-bounce': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
+      boxShadow: {
+        'apple-card': '0 2px 10px -2px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02)',
+        'apple-card-hover': '0 12px 28px -6px rgba(0, 0, 0, 0.07), 0 2px 6px -1px rgba(0, 0, 0, 0.03)',
+        'apple-float': '0 20px 40px -12px rgba(15, 71, 42, 0.25)',
       },
     },
   },

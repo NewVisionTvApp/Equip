@@ -21,6 +21,7 @@ import {
   Award,
   Check,
   Smartphone,
+  Sparkles,
 } from "lucide-react";
 import { SEED_PARTICIPANTS } from "@/db/seed-data";
 
@@ -107,6 +108,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
   const [activeFilterTab, setActiveFilterTab] = useState<"all" | "pastors" | "members" | "checked_in">("all");
   const [fastScanId, setFastScanId] = useState("");
   const [scanFeedback, setScanFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [recentlyToggledId, setRecentlyToggledId] = useState<string | null>(null);
 
   // Attendees State with initial realistic statuses
   const [attendees, setAttendees] = useState(
@@ -148,6 +150,26 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
     return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
 
+  // Subtle Apple Audio feedback (synthesized lightweight pop)
+  const playHapticAudio = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime); // High pleasant chime
+      osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.08);
+    } catch {
+      // AudioContext unavailable or blocked by autoplay
+    }
+  };
+
   // Filter attendees by Tab & Search
   const filteredAttendees = useMemo(() => {
     return attendees.filter((a) => {
@@ -167,8 +189,12 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
     });
   }, [attendees, activeFilterTab, searchQuery]);
 
-  // Toggle Check In with smooth timestamp
+  // Toggle Check In with Apple fluid response
   const toggleCheckIn = (id: string) => {
+    playHapticAudio();
+    setRecentlyToggledId(id);
+    setTimeout(() => setRecentlyToggledId(null), 800);
+
     setAttendees((prev) =>
       prev.map((a) => {
         if (a.id === id) {
@@ -200,6 +226,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
     );
 
     if (match) {
+      playHapticAudio();
       if (match.checkedIn) {
         setScanFeedback({
           message: `${match.fullName} (${match.id}) is already verified!`,
@@ -263,31 +290,39 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
   const checkedInCount = currentSession.checkedIn;
   const turnoutPercent = Math.round((checkedInCount / totalRegistered) * 100);
 
+  // Apple Watch style gauge parameters
+  // Semi-circle arc length for radius 70 = Math.PI * 70 ≈ 220
+  const arcLength = 220;
+  const arcOffset = arcLength - (arcLength * turnoutPercent) / 100;
+
   return (
-    <div className="min-h-screen bg-[#F4F6F8] text-slate-900 flex p-4 lg:p-6 gap-6 font-sans antialiased selection:bg-[#A3E635] selection:text-[#0F472A]">
-      {/* 1. LEFT SIDEBAR (Donezo Style: Rounded-2xl, crisp icons, dark green bottom card) */}
-      <aside className="hidden lg:flex flex-col w-60 bg-white rounded-2xl p-5 justify-between border border-slate-200/70 shadow-xs shrink-0">
+    <div className="min-h-screen bg-[#F8F9FA] bg-[radial-gradient(ellipse_100%_40%_at_50%_-10%,rgba(16,185,129,0.06),transparent)] text-slate-900 flex p-4 lg:p-6 gap-6 font-sans antialiased selection:bg-[#A3E635] selection:text-[#0F472A]">
+      {/* 1. LEFT SIDEBAR (Apple Translucent Frosted Glass with Spring Micro-Interactions) */}
+      <aside className="hidden lg:flex flex-col w-60 bg-white/85 backdrop-blur-xl rounded-2xl p-5 justify-between border border-slate-200/60 shadow-apple-card ring-1 ring-black/[0.02] shrink-0">
         <div className="flex flex-col gap-7">
-          {/* Brand Header with real Equip 3.0 winged logo */}
-          <div className="flex items-center gap-3 px-1">
-            <div className="w-10 h-10 rounded-xl bg-[#0F472A] p-1.5 flex items-center justify-center shrink-0 shadow-xs">
-              <img src="/logo.png" alt="Equip 3.0" className="w-full h-full object-contain" />
+          {/* Brand Header with real Equip 3.0 winged logo & Apple Spring Glow */}
+          <div className="flex items-center gap-3 px-1 group cursor-pointer">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F472A] to-[#064E3B] p-1.5 flex items-center justify-center shrink-0 shadow-xs ring-1 ring-white/20 group-hover:scale-105 group-active:scale-95 transition-all duration-300 ease-apple-spring">
+              <img src="/logo.png" alt="Equip 3.0" className="w-full h-full object-contain filter drop-shadow" />
             </div>
             <div className="flex flex-col">
-              <span className="text-base font-bold text-slate-900 tracking-tight">Equip 3.0</span>
-              <span className="text-[11px] text-slate-400 font-medium">Church Suite</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-base font-extrabold text-slate-900 tracking-tight">Equip 3.0</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#84CC16] animate-pulse" />
+              </div>
+              <span className="text-[11px] text-slate-400 font-medium tracking-tight">Church Suite</span>
             </div>
           </div>
 
-          {/* Navigation Links */}
+          {/* Navigation Links with Apple Instant Press Response */}
           <nav className="flex flex-col gap-6">
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">
                 MENU
               </span>
               <button
                 type="button"
-                className="flex items-center gap-3 px-3 py-2.5 bg-[#ECFDF5] text-[#065F46] rounded-xl font-semibold text-sm transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2.5 bg-[#ECFDF5] text-[#065F46] rounded-xl font-bold text-sm shadow-2xs active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left"
               >
                 <LayoutDashboard className="w-4 h-4 text-[#065F46]" />
                 <span>Dashboard</span>
@@ -295,33 +330,33 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
 
               <button
                 type="button"
-                className="flex items-center justify-between px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors text-left"
+                className="flex items-center justify-between px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left group"
               >
                 <div className="flex items-center gap-3">
-                  <Users className="w-4 h-4 text-slate-400" />
+                  <Users className="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors" />
                   <span>Attendees</span>
                 </div>
-                <span className="text-[11px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                <span className="text-[11px] font-bold bg-slate-100/90 text-slate-600 px-2 py-0.5 rounded-full group-hover:bg-slate-200/80 transition-colors">
                   184
                 </span>
               </button>
 
               <button
                 type="button"
-                className="flex items-center justify-between px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors text-left"
+                className="flex items-center justify-between px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left group"
               >
                 <div className="flex items-center gap-3">
-                  <Calendar className="w-4 h-4 text-slate-400" />
+                  <Calendar className="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors" />
                   <span>5 Sessions</span>
                 </div>
-                <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md">
+                <span className="text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2 py-0.5 rounded-md">
                   Active
                 </span>
               </button>
 
               <button
                 type="button"
-                className="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left"
               >
                 <Building2 className="w-4 h-4 text-slate-400" />
                 <span>Churches</span>
@@ -329,7 +364,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
 
               <button
                 type="button"
-                className="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left"
               >
                 <BarChart3 className="w-4 h-4 text-slate-400" />
                 <span>Analytics</span>
@@ -337,12 +372,12 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">
                 GENERAL
               </span>
               <button
                 type="button"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left"
               >
                 <Settings className="w-4 h-4 text-slate-400" />
                 <span>Settings</span>
@@ -350,7 +385,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
 
               <button
                 type="button"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left"
               >
                 <HelpCircle className="w-4 h-4 text-slate-400" />
                 <span>Help</span>
@@ -358,7 +393,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
 
               <button
                 type="button"
-                className="flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-xl font-medium text-sm transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50/80 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left"
               >
                 <LogOut className="w-4 h-4 text-red-500" />
                 <span>Logout</span>
@@ -367,33 +402,36 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
           </nav>
         </div>
 
-        {/* Bottom Usher App Card (Matching Donezo "Download our Mobile App" aesthetic) */}
-        <div className="bg-[#0A3D24] text-white rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden shadow-xs">
-          {/* Subtle Organic Wave Texture */}
+        {/* Bottom Usher Card (Apple Depth with Subtle Ripple) */}
+        <div className="bg-gradient-to-br from-[#0B3A23] to-[#041D11] text-white rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden shadow-xs ring-1 ring-inset ring-white/10 group">
+          {/* Subtle Concentric Rings */}
           <svg
-            className="absolute -right-3 -bottom-3 w-28 h-28 text-white/10 pointer-events-none"
+            className="absolute -right-4 -bottom-4 w-32 h-32 text-white/5 pointer-events-none group-hover:scale-110 transition-transform duration-700 ease-apple-spring"
             viewBox="0 0 100 100"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="1.5"
           >
-            <circle cx="90" cy="90" r="30" />
-            <circle cx="90" cy="90" r="50" />
-            <circle cx="90" cy="90" r="70" />
+            <circle cx="85" cy="85" r="28" />
+            <circle cx="85" cy="85" r="48" />
+            <circle cx="85" cy="85" r="68" />
           </svg>
 
           <div className="flex flex-col gap-1 z-10">
-            <div className="flex items-center gap-1.5">
-              <QrCode className="w-4 h-4 text-[#A3E635]" />
-              <span className="text-xs font-bold text-white">Usher Mobile Desk</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <QrCode className="w-4 h-4 text-[#A3E635]" />
+                <span className="text-xs font-bold text-white tracking-tight">Usher Mobile Desk</span>
+              </div>
+              <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-pulse" />
             </div>
-            <p className="text-[11px] text-emerald-200 leading-tight">
+            <p className="text-[11px] text-emerald-200/90 leading-tight">
               Instant door badge scanning for active sessions.
             </p>
           </div>
           <button
             type="button"
-            className="w-full h-8 bg-[#166534] hover:bg-[#15803d] text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors z-10"
+            className="w-full h-8 bg-gradient-to-r from-[#166534] to-[#15803d] hover:brightness-110 active:scale-[0.96] text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-150 ease-apple-spring z-10 shadow-xs"
           >
             <Smartphone className="w-3.5 h-3.5" />
             <span>Launch Desk</span>
@@ -403,28 +441,37 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
 
       {/* 2. MAIN DASHBOARD CONTENT */}
       <main className="flex-1 flex flex-col gap-6 max-w-7xl mx-auto w-full">
-        {/* Top Header Bar (Donezo Search + User Pill) */}
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between bg-white rounded-2xl px-6 py-3.5 border border-slate-200/70 shadow-xs gap-4">
-          {/* Search Bar */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+        {/* Top Header Bar (Apple Frosted Glass & Precision Alignment) */}
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/85 backdrop-blur-xl rounded-2xl px-6 py-3.5 border border-slate-200/60 shadow-apple-card ring-1 ring-black/[0.02] gap-4">
+          {/* Search Bar with Spring Focus Bloom */}
+          <div className="relative flex-1 max-w-md group">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#0F472A]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search task, attendee, or EQ ID..."
-              className="w-full h-10 pl-10 pr-12 bg-slate-50/80 border border-slate-200/80 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A] transition-all"
+              placeholder="Search attendee, phone, or EQ ID..."
+              className="w-full h-10 pl-10 pr-12 bg-slate-50/80 border border-slate-200/70 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all duration-200 ease-apple-spring"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-400 bg-white border border-slate-200 px-1.5 py-0.5 rounded-md">
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 bg-white border border-slate-200/80 px-1.5 py-0.5 rounded-md shadow-2xs group-focus-within:border-[#0F472A]/40 group-focus-within:text-[#0F472A] transition-colors">
               ⌘ F
             </span>
           </div>
 
           {/* Right Header Badges */}
           <div className="flex items-center gap-4 self-end sm:self-auto">
+            {/* Live Indicator */}
+            <div className="hidden md:flex items-center gap-2 bg-emerald-50/80 text-[#166534] border border-emerald-200/60 rounded-full px-3 py-1 text-xs font-semibold">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
+              </span>
+              <span>3 Terminals Synced</span>
+            </div>
+
             <button
               type="button"
-              className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 relative transition-colors"
+              className="w-10 h-10 rounded-xl bg-slate-50/80 border border-slate-200/70 flex items-center justify-center text-slate-600 hover:text-slate-900 active:scale-90 relative transition-all duration-150 ease-apple-spring"
               aria-label="Notifications"
             >
               <Bell className="w-4 h-4" />
@@ -432,7 +479,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
             </button>
 
             <div className="flex items-center gap-3 pl-2 border-l border-slate-200/60">
-              <div className="w-9 h-9 rounded-full bg-[#0F472A] text-[#A3E635] flex items-center justify-center text-xs font-bold shadow-xs">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#0F472A] to-[#166534] text-[#A3E635] flex items-center justify-center text-xs font-bold shadow-xs ring-2 ring-emerald-50">
                 PA
               </div>
               <div className="hidden sm:flex flex-col text-left">
@@ -443,10 +490,10 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
           </div>
         </header>
 
-        {/* Dashboard Title & Action Buttons */}
+        {/* Dashboard Title & Quick Action CTAs */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 px-1">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-[-0.03em]">
               Dashboard
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -458,7 +505,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
             <button
               type="button"
               onClick={onRegisterClick}
-              className="h-10 px-4 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-all active:scale-[0.98]"
+              className="h-10 px-4 bg-[#0F472A] hover:bg-[#165A36] active:scale-[0.96] text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs hover:shadow-apple-float transition-all duration-200 ease-apple-spring"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>+ Register Attendee</span>
@@ -467,7 +514,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
             <button
               type="button"
               onClick={handleExportCSV}
-              className="h-10 px-4 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200/80 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-all"
+              className="h-10 px-4 bg-white/90 hover:bg-slate-50 active:scale-[0.96] text-slate-800 border border-slate-200/80 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-apple-card transition-all duration-200 ease-apple-spring"
             >
               <Download className="w-4 h-4 text-slate-500" />
               <span>Export Roster</span>
@@ -475,53 +522,47 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
           </div>
         </div>
 
-        {/* Top 4 Stat Cards (Donezo Exact Layout: 1 Hero Dark Green Card + 3 Clean White Cards) */}
+        {/* Top 4 Stat Cards (Apple Materials & Hover Lifts) */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Primary Dark Green Hero Card */}
-          <div className="bg-[#0F472A] text-white rounded-2xl p-5 flex flex-col justify-between h-36 shadow-xs relative overflow-hidden group">
-            {/* Subtle Donezo Wave Glow */}
-            <svg
-              className="absolute -right-4 -bottom-4 w-32 h-32 text-white/5 pointer-events-none"
-              viewBox="0 0 100 100"
-              fill="currentColor"
-            >
-              <circle cx="80" cy="80" r="40" />
-            </svg>
+          <div className="bg-gradient-to-br from-[#064E3B] via-[#0F472A] to-[#041D11] text-white rounded-2xl p-5 flex flex-col justify-between h-36 shadow-apple-card hover:shadow-apple-card-hover hover:-translate-y-0.5 transition-all duration-300 ease-apple-spring relative overflow-hidden group ring-1 ring-inset ring-white/10">
+            {/* Luminous Glow Ambient Circle */}
+            <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-[#A3E635]/10 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-700 ease-apple-spring" />
 
             <div className="flex justify-between items-center z-10">
-              <span className="text-xs font-semibold text-[#86EFAC]">Total Registrations</span>
-              <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
+              <span className="text-xs font-semibold text-[#86EFAC] tracking-tight">Total Registrations</span>
+              <div className="w-7 h-7 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/15 group-hover:bg-white/20 group-hover:rotate-45 transition-all duration-300 ease-apple-spring">
                 <ArrowUpRight className="w-3.5 h-3.5 text-white" />
               </div>
             </div>
 
             <div className="flex flex-col gap-1 z-10">
-              <span className="text-3xl font-extrabold text-white tracking-tight tabular-nums">
+              <span className="text-3xl font-extrabold text-white tracking-[-0.04em] tabular-nums">
                 184
               </span>
               <div className="flex items-center gap-1.5">
-                <span className="bg-[#A3E635] text-[#0F472A] text-[10px] font-bold px-1.5 py-0.5 rounded">
+                <span className="bg-[#A3E635] text-[#0F472A] text-[10px] font-black px-1.5 py-0.5 rounded shadow-2xs">
                   +38
                 </span>
-                <span className="text-[11px] text-[#DCFCE7]">Registered this week</span>
+                <span className="text-[11px] text-[#DCFCE7] font-medium">Registered this week</span>
               </div>
             </div>
           </div>
 
           {/* Card 2: Ordained Clergy */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-36">
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover hover:-translate-y-0.5 transition-all duration-300 ease-apple-spring flex flex-col justify-between h-36 group">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-semibold text-slate-500">Ordained Clergy</span>
-              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
-                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-xs font-semibold text-slate-500 tracking-tight">Ordained Clergy</span>
+              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-200/80 group-hover:rotate-45 transition-all duration-300 ease-apple-spring">
+                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" />
               </div>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+              <span className="text-3xl font-extrabold text-slate-900 tracking-[-0.04em] tabular-nums">
                 72
               </span>
               <div className="flex items-center gap-1.5">
-                <span className="bg-slate-100 text-slate-700 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
                   39.1%
                 </span>
                 <span className="text-[11px] text-slate-400">Bishops & Pastors</span>
@@ -530,19 +571,19 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
           </div>
 
           {/* Card 3: Church Delegations */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-36">
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover hover:-translate-y-0.5 transition-all duration-300 ease-apple-spring flex flex-col justify-between h-36 group">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-semibold text-slate-500">Members & Workers</span>
-              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
-                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-xs font-semibold text-slate-500 tracking-tight">Members & Workers</span>
+              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-200/80 group-hover:rotate-45 transition-all duration-300 ease-apple-spring">
+                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" />
               </div>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+              <span className="text-3xl font-extrabold text-slate-900 tracking-[-0.04em] tabular-nums">
                 112
               </span>
               <div className="flex items-center gap-1.5">
-                <span className="bg-slate-100 text-slate-700 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
                   8 Churches
                 </span>
                 <span className="text-[11px] text-slate-400">Host & visiting delegations</span>
@@ -550,16 +591,16 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
             </div>
           </div>
 
-          {/* Card 4: Session 2 Verified */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-36">
+          {/* Card 4: Session Verified */}
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover hover:-translate-y-0.5 transition-all duration-300 ease-apple-spring flex flex-col justify-between h-36 group">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-semibold text-slate-500">{currentSession.short} Verified</span>
-              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
-                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-xs font-semibold text-slate-500 tracking-tight">{currentSession.short} Verified</span>
+              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-200/80 group-hover:rotate-45 transition-all duration-300 ease-apple-spring">
+                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" />
               </div>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+              <span className="text-3xl font-extrabold text-slate-900 tracking-[-0.04em] tabular-nums">
                 {currentSession.checkedIn}
               </span>
               <div className="flex items-center gap-1.5">
@@ -572,18 +613,18 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
           </div>
         </section>
 
-        {/* Middle Section (Donezo 3-Column: Project Analytics, Reminders, Project List) */}
+        {/* Middle Section (3-Column Layout with Smooth Spring Transitions) */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Col 1 (5 cols): Session Attendance (Donezo "Project Analytics") */}
-          <div className="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-64">
+          {/* Col 1 (5 cols): Session Attendance Pillars with Apple Fluid Spring Motion */}
+          <div className="lg:col-span-5 bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring flex flex-col justify-between h-64">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-bold text-slate-900">Session Attendance</span>
-              <span className="text-[11px] font-semibold text-[#166534] bg-emerald-50 px-2 py-0.5 rounded-md">
+              <span className="text-sm font-bold text-slate-900 tracking-tight">Session Attendance</span>
+              <span className="text-[11px] font-bold text-[#166534] bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md">
                 5 Sessions
               </span>
             </div>
 
-            {/* Pillar Capsules */}
+            {/* Pillar Capsules with Spring Hover Lifts */}
             <div className="flex items-end justify-between px-2 pt-2 h-44">
               {SESSIONS.map((s) => {
                 const isSelected = selectedSessionKey === s.key;
@@ -591,36 +632,39 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
                   <button
                     key={s.key}
                     type="button"
-                    onClick={() => setSelectedSessionKey(s.key)}
+                    onClick={() => {
+                      playHapticAudio();
+                      setSelectedSessionKey(s.key);
+                    }}
                     className="flex flex-col items-center gap-2 group transition-all relative focus:outline-none"
                   >
-                    {/* Floating Percentage Badge for Active Session (Donezo Style) */}
+                    {/* Floating Apple Bounce Badge for Active Session */}
                     {isSelected && (
-                      <div className="absolute -top-7 flex flex-col items-center animate-in fade-in zoom-in-90">
-                        <span className="text-[10px] font-extrabold bg-[#0F472A] text-white px-1.5 py-0.5 rounded shadow-xs">
+                      <div className="absolute -top-7 flex flex-col items-center animate-in zoom-in-75 duration-200 ease-apple-bounce">
+                        <span className="text-[10px] font-extrabold bg-[#0F472A] text-white px-2 py-0.5 rounded-full shadow-xs">
                           {s.percent}%
                         </span>
                         <div className="w-1.5 h-1.5 bg-[#0F472A] rotate-45 -mt-0.5" />
                       </div>
                     )}
 
-                    {/* Capsule Bar */}
-                    <div className="w-10 h-32 bg-slate-100 rounded-full flex flex-col justify-end p-1 transition-all group-hover:bg-slate-200/70">
+                    {/* Capsule Bar with smooth spring expansion */}
+                    <div className="w-10 h-32 bg-slate-100 rounded-full flex flex-col justify-end p-1 transition-all group-hover:bg-slate-200/70 group-hover:scale-105 group-active:scale-95 duration-200 ease-apple-spring">
                       <div
-                        className={`w-full rounded-full transition-all duration-300 ${
+                        className={`w-full rounded-full transition-all duration-500 ease-apple-spring ${
                           isSelected
-                            ? "bg-[#0F472A]"
+                            ? "bg-[#0F472A] shadow-xs"
                             : s.status === "Completed"
                             ? "bg-[#166534]/70"
-                            : "bg-[#84CC16]/60"
+                            : "bg-[#84CC16]/70"
                         }`}
                         style={{ height: `${s.percent}%` }}
                       />
                     </div>
 
                     <span
-                      className={`text-[10px] font-semibold ${
-                        isSelected ? "text-[#0F472A] font-bold" : "text-slate-500"
+                      className={`text-[10px] font-bold transition-colors ${
+                        isSelected ? "text-[#0F472A]" : "text-slate-500"
                       }`}
                     >
                       {s.short}
@@ -631,31 +675,32 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
             </div>
           </div>
 
-          {/* Col 2 (4 cols): Current Session Focus (Donezo "Reminders") */}
-          <div className="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-64">
+          {/* Col 2 (4 cols): Current Session Focus */}
+          <div className="lg:col-span-4 bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring flex flex-col justify-between h-64">
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 CURRENT SESSION
               </span>
-              <h3 className="text-base font-bold text-slate-900 leading-snug">
+              <h3 className="text-base font-extrabold text-slate-900 leading-snug tracking-tight">
                 {currentSession.name}
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">Time: {currentSession.time}</p>
+              <p className="text-xs text-slate-500 mt-0.5 font-medium">Time: {currentSession.time}</p>
               <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-1">
                 <Award className="w-3.5 h-3.5 text-[#0F472A]" />
-                <span className="font-semibold text-slate-800">{currentSession.speaker}</span>
+                <span className="font-bold text-slate-800">{currentSession.speaker}</span>
                 <span className="text-slate-400">· {currentSession.hall}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-2 pt-2">
-              <div className="flex items-center gap-2 bg-emerald-50 rounded-lg px-2.5 py-1.5 text-xs text-[#166534] font-medium">
+              <div className="flex items-center gap-2 bg-emerald-50/80 border border-emerald-200/60 rounded-xl px-2.5 py-1.5 text-xs text-[#166534] font-medium">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>Live door usher sync active</span>
               </div>
               <button
                 type="button"
-                className="w-full h-9 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.98]"
+                onClick={() => playHapticAudio()}
+                className="w-full h-9 bg-[#0F472A] hover:bg-[#165A36] active:scale-[0.97] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all duration-150 ease-apple-spring shadow-xs"
               >
                 <Play className="w-3.5 h-3.5 fill-white" />
                 <span>Launch Session 2 Check-in</span>
@@ -663,56 +708,56 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
             </div>
           </div>
 
-          {/* Col 3 (3 cols): Delegations List (Donezo "Project" List) */}
-          <div className="lg:col-span-3 bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-64">
+          {/* Col 3 (3 cols): Delegations List */}
+          <div className="lg:col-span-3 bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring flex flex-col justify-between h-64">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-bold text-slate-900">Delegations</span>
-              <span className="text-[11px] font-semibold text-[#0F472A] bg-lime-100 px-2 py-0.5 rounded-md">
+              <span className="text-sm font-bold text-slate-900 tracking-tight">Delegations</span>
+              <span className="text-[11px] font-bold text-[#0F472A] bg-lime-100 border border-lime-200/60 px-2 py-0.5 rounded-md">
                 8 Churches
               </span>
             </div>
 
             <div className="flex flex-col gap-3 my-auto">
               {DELEGATIONS.map((c) => (
-                <div key={c.name} className="flex items-center justify-between text-xs">
+                <div key={c.name} className="flex items-center justify-between text-xs group cursor-pointer hover:translate-x-0.5 transition-transform duration-150">
                   <div className="flex items-center gap-2 truncate pr-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${c.dot} shrink-0`} />
-                    <span className="font-medium text-slate-700 truncate">{c.name}</span>
+                    <span className={`w-2.5 h-2.5 rounded-full ${c.dot} shrink-0 group-hover:scale-125 transition-transform duration-200`} />
+                    <span className="font-semibold text-slate-700 truncate">{c.name}</span>
                   </div>
                   <span className="font-bold text-slate-900 tabular-nums shrink-0">{c.count}</span>
                 </div>
               ))}
             </div>
 
-            <span className="text-[11px] text-slate-400 text-center border-t border-slate-100 pt-2">
+            <span className="text-[11px] text-slate-400 font-medium text-center border-t border-slate-100 pt-2">
               184 Total Expected Attendees
             </span>
           </div>
         </section>
 
-        {/* Bottom Section (Donezo 3-Column: Team Collaboration, Project Progress, Time Tracker) */}
+        {/* Bottom Section (Roster, Apple Watch Style Gauge, Time Tracker) */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Col 1 (5 cols): Live Attendee Roster (Donezo "Team Collaboration") */}
-          <div className="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-72">
+          {/* Col 1 (5 cols): Live Attendee Roster with Apple Segmented Control */}
+          <div className="lg:col-span-5 bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring flex flex-col justify-between h-72">
             <div className="flex flex-col gap-2 mb-2">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-slate-900">Attendee Roster</span>
-                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                  <span className="text-sm font-bold text-slate-900 tracking-tight">Attendee Roster</span>
+                  <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
                     {filteredAttendees.length} Shown
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={handleExportCSV}
-                  className="text-xs font-semibold text-[#166534] hover:underline"
+                  className="text-xs font-bold text-[#166534] hover:underline"
                 >
                   Export CSV →
                 </button>
               </div>
 
-              {/* Roster Filter Tabs */}
-              <div className="flex items-center gap-1 text-xs">
+              {/* Apple Pill Segmented Control */}
+              <div className="flex items-center gap-1 bg-slate-100/80 p-0.5 rounded-lg text-xs">
                 {[
                   { key: "all", label: "All" },
                   { key: "pastors", label: "Pastors" },
@@ -722,11 +767,14 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
                   <button
                     key={tab.key}
                     type="button"
-                    onClick={() => setActiveFilterTab(tab.key as any)}
-                    className={`px-2 py-0.5 rounded-md font-semibold text-[11px] transition-colors ${
+                    onClick={() => {
+                      playHapticAudio();
+                      setActiveFilterTab(tab.key as any);
+                    }}
+                    className={`flex-1 py-1 rounded-md font-bold text-[11px] transition-all duration-200 ease-apple-spring text-center active:scale-95 ${
                       activeFilterTab === tab.key
-                        ? "bg-[#0F472A] text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200/60"
+                        ? "bg-[#0F472A] text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
                     {tab.label}
@@ -735,88 +783,105 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
               </div>
             </div>
 
-            {/* List Rows */}
+            {/* List Rows with Spring Interactive Touch Feedback */}
             <div className="flex flex-col gap-2 overflow-y-auto max-h-48 pr-1">
-              {filteredAttendees.slice(0, 4).map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-xl transition-colors border border-transparent hover:border-slate-100"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
-                        a.isOrdained
-                          ? "bg-purple-100 text-purple-900"
-                          : "bg-emerald-100 text-emerald-900"
-                      }`}
-                    >
-                      {a.fullName.slice(0, 2).toUpperCase()}
+              {filteredAttendees.slice(0, 4).map((a) => {
+                const isJustToggled = recentlyToggledId === a.id;
+                return (
+                  <div
+                    key={a.id}
+                    className={`flex items-center justify-between p-2 rounded-xl transition-all duration-200 ease-apple-spring border border-transparent hover:border-slate-200/60 hover:bg-slate-50/80 ${
+                      isJustToggled ? "ring-2 ring-emerald-400/50 bg-emerald-50/40 scale-[1.01]" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-transform duration-200 ${
+                          a.isOrdained
+                            ? "bg-purple-100 text-purple-900"
+                            : "bg-emerald-100 text-emerald-900"
+                        }`}
+                      >
+                        {a.fullName.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-slate-900 leading-tight">
+                          {a.fullName}
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-medium">
+                          {a.roleOffice} · {a.churchName}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold text-slate-900 leading-tight">
-                        {a.fullName}
-                      </span>
-                      <span className="text-[11px] text-slate-500">
-                        {a.roleOffice} · {a.churchName}
-                      </span>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-[#0F472A] bg-lime-100 px-2 py-0.5 rounded-md">
-                      {a.id}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => toggleCheckIn(a.id)}
-                      className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-all ${
-                        a.checkedIn
-                          ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                          : "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                      }`}
-                    >
-                      {a.checkedIn ? "Checked In" : "Check In"}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-[#0F472A] bg-lime-100/90 border border-lime-200/60 px-2 py-0.5 rounded-md">
+                        {a.id}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => toggleCheckIn(a.id)}
+                        className={`text-xs font-bold px-2.5 py-1 rounded-full active:scale-90 transition-all duration-150 ease-apple-spring ${
+                          a.checkedIn
+                            ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200/80 shadow-2xs"
+                            : "bg-amber-100 text-amber-800 hover:bg-amber-200/80 shadow-2xs"
+                        }`}
+                      >
+                        {a.checkedIn ? "Checked In" : "Check In"}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
-          {/* Col 2 (3 cols): Turnout Progress Gauge (Donezo "Project Progress") */}
-          <div className="lg:col-span-3 bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between items-center text-center h-72">
+          {/* Col 2 (3 cols): Turnout Progress Gauge (Apple Watch Style Arc Sweeping Transition) */}
+          <div className="lg:col-span-3 bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring flex flex-col justify-between items-center text-center h-72">
             <div className="w-full text-left">
-              <span className="text-sm font-bold text-slate-900">Project Progress</span>
+              <span className="text-sm font-bold text-slate-900 tracking-tight">Project Progress</span>
             </div>
 
-            {/* Half-Circle SVG Gauge (Donezo Green Arc) */}
-            <div className="flex flex-col items-center justify-center my-auto">
-              <svg width="160" height="85" viewBox="0 0 180 95" className="overflow-visible">
-                {/* Track */}
+            {/* Apple Watch Fluid Arc Gauge */}
+            <div className="flex flex-col items-center justify-center my-auto relative">
+              <svg width="160" height="90" viewBox="0 0 180 95" className="overflow-visible">
+                {/* Background Track */}
                 <path
                   d="M 15 90 A 75 75 0 0 1 165 90"
                   fill="none"
                   stroke="#E2E8F0"
-                  strokeWidth="16"
+                  strokeWidth="15"
                   strokeLinecap="round"
                 />
-                {/* Donezo Dark Green Progress */}
+                {/* Dynamic Spring Progress Arc */}
                 <path
-                  d="M 15 90 A 75 75 0 0 1 155 52"
+                  d="M 15 90 A 75 75 0 0 1 165 90"
                   fill="none"
-                  stroke="#0F472A"
-                  strokeWidth="16"
+                  stroke="url(#apple-gauge-gradient)"
+                  strokeWidth="15"
                   strokeLinecap="round"
+                  strokeDasharray={arcLength}
+                  strokeDashoffset={arcOffset}
+                  className="transition-[stroke-dashoffset] duration-700 ease-apple-spring"
                 />
+                <defs>
+                  <linearGradient id="apple-gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#0F472A" />
+                    <stop offset="100%" stopColor="#84CC16" />
+                  </linearGradient>
+                </defs>
               </svg>
-              <span className="text-3xl font-extrabold text-slate-900 -mt-2 tracking-tight tabular-nums">
-                {turnoutPercent}%
-              </span>
-              <span className="text-[11px] text-slate-500 font-medium">Session Progress</span>
+
+              <div className="flex flex-col items-center -mt-2">
+                <span className="text-3xl font-extrabold text-slate-900 tracking-[-0.04em] tabular-nums">
+                  {turnoutPercent}%
+                </span>
+                <span className="text-[11px] text-slate-500 font-semibold">Session Progress</span>
+              </div>
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4 text-xs text-slate-600">
+            <div className="flex items-center gap-4 text-xs text-slate-600 font-medium">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#0F472A]" />
                 <span>Completed</span>
@@ -828,11 +893,11 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
             </div>
           </div>
 
-          {/* Col 3 (4 cols): Time Tracker with 3D Wave Pattern (Donezo "Time Tracker") */}
-          <div className="lg:col-span-4 bg-[#0D3821] text-white rounded-2xl p-5 flex flex-col justify-between h-72 shadow-xs relative overflow-hidden border border-emerald-900/40">
-            {/* Donezo Exact 3D Wave Fluid Ribbons */}
+          {/* Col 3 (4 cols): Time Tracker with Fluid Topographic Wave Motion */}
+          <div className="lg:col-span-4 bg-gradient-to-br from-[#0B3A23] via-[#0D3821] to-[#041D11] text-white rounded-2xl p-5 flex flex-col justify-between h-72 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring relative overflow-hidden border border-emerald-900/40 ring-1 ring-inset ring-white/10 group">
+            {/* Apple 3D Wave Ribbons with gentle hover shift */}
             <svg
-              className="absolute inset-0 w-full h-full text-[#A3E635]/15 pointer-events-none"
+              className="absolute inset-0 w-full h-full text-[#A3E635]/15 pointer-events-none group-hover:scale-105 transition-transform duration-700 ease-apple-spring"
               viewBox="0 0 300 300"
               fill="none"
               stroke="currentColor"
@@ -845,7 +910,10 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
             </svg>
 
             <div className="flex justify-between items-center z-10">
-              <span className="text-xs font-semibold text-emerald-300">Time Tracker</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-emerald-300 tracking-tight">Time Tracker</span>
+                <Sparkles className="w-3 h-3 text-[#A3E635]" />
+              </div>
               <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-pulse" />
             </div>
 
@@ -853,22 +921,28 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
               <span className="font-mono text-3xl sm:text-4xl font-extrabold text-white tracking-widest tabular-nums filter drop-shadow">
                 {formatTimer(secondsRemaining)}
               </span>
-              <span className="text-[11px] text-emerald-200">Main Auditorium Live</span>
+              <span className="text-[11px] text-emerald-200/90 font-medium">Main Auditorium Live</span>
             </div>
 
             <div className="flex items-center justify-center gap-3 z-10">
               <button
                 type="button"
-                onClick={() => setIsTimerRunning(!isTimerRunning)}
-                className="w-10 h-10 rounded-full bg-white text-[#0D3821] hover:bg-emerald-50 flex items-center justify-center transition-all shadow-md active:scale-95"
+                onClick={() => {
+                  playHapticAudio();
+                  setIsTimerRunning(!isTimerRunning);
+                }}
+                className="w-10 h-10 rounded-full bg-white text-[#0D3821] hover:bg-emerald-50 active:scale-90 flex items-center justify-center transition-all duration-150 ease-apple-spring shadow-md"
                 aria-label={isTimerRunning ? "Pause timer" : "Resume timer"}
               >
                 {isTimerRunning ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
               </button>
               <button
                 type="button"
-                onClick={() => setSecondsRemaining(9910)}
-                className="w-10 h-10 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-all shadow-md active:scale-95"
+                onClick={() => {
+                  playHapticAudio();
+                  setSecondsRemaining(9910);
+                }}
+                className="w-10 h-10 rounded-full bg-red-500 hover:bg-red-600 active:scale-90 flex items-center justify-center text-white transition-all duration-150 ease-apple-spring shadow-md"
                 aria-label="Reset timer"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -877,15 +951,15 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
           </div>
         </section>
 
-        {/* Door Fast Check-in Command Bar at Bottom */}
-        <section className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Door Fast Check-in Command Bar with Apple Bounce Feedback */}
+        <section className="bg-white/90 backdrop-blur-md rounded-2xl p-4 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#0F472A] flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#0F472A] border border-emerald-200/60 flex items-center justify-center shrink-0 shadow-2xs">
               <QrCode className="w-5 h-5 text-[#0F472A]" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-bold text-slate-900">Door Fast Check-in Desk</span>
-              <span className="text-[11px] text-slate-400">Type participant ID (e.g. EQ-29402) or phone to verify pass</span>
+              <span className="text-xs font-bold text-slate-900 tracking-tight">Door Fast Check-in Desk</span>
+              <span className="text-[11px] text-slate-400 font-medium">Type participant ID (e.g. EQ-29402) or phone to verify pass</span>
             </div>
           </div>
 
@@ -895,11 +969,11 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
               value={fastScanId}
               onChange={(e) => setFastScanId(e.target.value)}
               placeholder="e.g. EQ-29402 or phone..."
-              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+              className="w-full h-9 px-3 bg-slate-50/80 border border-slate-200/80 rounded-xl text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all duration-150 ease-apple-spring"
             />
             <button
               type="submit"
-              className="h-9 px-4 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors shadow-xs"
+              className="h-9 px-4 bg-[#0F472A] hover:bg-[#165A36] active:scale-[0.96] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-all duration-150 ease-apple-spring shadow-xs"
             >
               <Check className="w-3.5 h-3.5" />
               <span>Verify</span>
@@ -908,13 +982,13 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
 
           {scanFeedback && (
             <div
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 animate-in slide-in-from-top-1 zoom-in-95 duration-200 ease-apple-bounce ${
                 scanFeedback.type === "success"
-                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                  : "bg-amber-50 text-amber-800 border border-amber-200"
+                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-xs"
+                  : "bg-amber-50 text-amber-800 border border-amber-200/80 shadow-xs"
               }`}
             >
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
               <span>{scanFeedback.message}</span>
             </div>
           )}
