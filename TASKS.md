@@ -6,7 +6,7 @@
 - [x] TASK-003: Download and configure required repository skills (`apple-design`, `caveman`, `icm-architect`, `impeccable`, `ponytail`, `cloudflare`, `wrangler`, `workers-best-practices`).
 - [x] TASK-004: Initialize Git repository and `.gitignore`.
 - [x] TASK-005: Create complete project documentation suite (`PRD.md`, `ARCHITECTURE.md`, `DESIGN.md`, `RULES.md`, `DECISIONS.md`, `TEST_PLAN.md`, `SECURITY.md`, `.env.example`).
-- [ ] TASK-006: Scaffold project dependencies (`package.json`, TypeScript, Tailwind CSS, Drizzle ORM, Better Auth, Wrangler config).
+- [x] TASK-006: Scaffold project dependencies (`package.json`, TypeScript, Tailwind CSS, Drizzle ORM, Better Auth, Wrangler config).
 
 ## Phase 2: Core Data Layer & Relational Schemas
 - [ ] TASK-007: Define Drizzle schema for Better Auth tables (`user`, `session`, `account`, `verification`) and domain tables (`participants`, `events`, `registrations`, `session_attendance`).
