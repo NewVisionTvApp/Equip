@@ -23,17 +23,31 @@
   - Helper & Badge Text: `text-xs` font-medium.
   - Participant ID Display: Monospaced / tabular font (`font-mono tracking-widest text-xl font-bold`).
 
-## 3. Color Palette
-- **Primary / Brand:**
-  - Deep Navy / Indigo: `#1E293B` (slate-800) to `#0F172A` (slate-900) - provides grounded authority and calm readability.
-  - Accent / Action: `#2563EB` (blue-600) / Hover `#1D4ED8` (blue-700) - primary action buttons and active indicators.
-- **Backgrounds:**
-  - Public Background: `#F8FAFC` (slate-50) with white surface cards (`#FFFFFF`).
-  - Subtle borders: `#E2E8F0` (slate-200).
+## 3. Brand Identity & Color Palette (Equip 3.0 Logo)
+
+The color system directly reflects the official **Equip 3.0** logo emblem:
+
+- **Primary Brand Accent (Vibrant Lime / Leaf Green):**
+  - Hex: `#84CC16` (Lime-500) / `#A3E635` (Lime-400)
+  - Meaning: Growth, vitality, impartation, and spiritual equipment.
+  - Usage: Primary CTAs, active highlights, badge accents, Unique ID emphasis.
+- **Secondary Grounding (Deep Forest / Emerald Green):**
+  - Hex: `#065F46` (Emerald-800) / `#047857` (Emerald-700)
+  - Meaning: Stability, depth, and ministerial authority.
+  - Usage: Secondary buttons, dark accents, footer/border anchors.
+- **Foundation / Dark Charcoal (Logo Backdrop):**
+  - Hex: `#0B0F17` (Deep Charcoal 950) / `#0F172A` (Slate-900)
+  - Usage: Contrasting dark hero bars, top navigation, high-contrast dark badges.
+- **Surfaces & Neutrals:**
+  - Public Background: `#F8FAFC` (Clean off-white)
+  - Card Surfaces: `#FFFFFF` (White)
+  - Borders: `#E2E8F0` (Slate-200)
+  - Text Primary: `#0F172A` (Slate-900)
+  - Text Muted: `#64748B` (Slate-500)
 - **Status & Feedback:**
-  - Success / Confirmed: `#059669` (emerald-600) / Light emerald background `#ECFDF5`.
-  - Attention / Pending: `#D97706` (amber-600) / Light amber background `#FFFBEB`.
-  - Error: `#DC2626` (red-600) / Light red background `#FEF2F2`.
+  - Confirmed / Checked In: `#059669` (Emerald-600) with `#ECFDF5` background.
+  - Warning / Pending: `#D97706` (Amber-600) with `#FFFBEB` background.
+  - Error: `#DC2626` (Red-600) with `#FEF2F2` background.
 
 ## 4. Components & Interactions
 ### Public Form Elements
