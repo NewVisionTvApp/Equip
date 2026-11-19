@@ -12,6 +12,9 @@ import {
   getAttendeesForEvent,
   registerParticipantForEvent,
   toggleSessionAttendanceRecord,
+  updateEventRecord,
+  updateEventSessionRecord,
+  SessionConfig,
 } from "./lib/store";
 
 export default function App() {
@@ -57,6 +60,21 @@ export default function App() {
     };
     setPlatformState(updated);
     savePlatformState(updated);
+  };
+
+  const handleUpdateEvent = (updatedEvent: EquipEvent) => {
+    const updated = updateEventRecord(platformState, updatedEvent.id, updatedEvent);
+    setPlatformState(updated);
+  };
+
+  const handleUpdateSession = (sessionKey: string, sessionData: Partial<SessionConfig>) => {
+    const updated = updateEventSessionRecord(
+      platformState,
+      activeEvent.id,
+      sessionKey,
+      sessionData
+    );
+    setPlatformState(updated);
   };
 
   const handleRegisterParticipant = (participantData: any, _isReturning: boolean = false) => {
@@ -186,6 +204,8 @@ export default function App() {
           totalRegistrations={activeAttendees.length}
           ordainedCount={ordainedCount}
           attendeesData={activeAttendees}
+          sessionsData={activeEvent.sessions}
+          onUpdateSession={handleUpdateSession}
         />
       )}
 
@@ -196,6 +216,7 @@ export default function App() {
           onOpenSessionAttendance={() => setView("attendance")}
           activeEventName={activeEvent.title}
           attendeesData={activeAttendees}
+          sessionsData={activeEvent.sessions}
           onToggleSession={handleToggleAttendance}
         />
       )}
@@ -208,7 +229,9 @@ export default function App() {
           activeEventName={activeEvent.title}
           activeEventId={activeEvent.id}
           rosterData={activeAttendees}
+          sessionsData={activeEvent.sessions}
           onToggleAttendance={handleToggleAttendance}
+          onUpdateSession={handleUpdateSession}
         />
       )}
 
@@ -230,6 +253,7 @@ export default function App() {
         activeEventId={platformState.activeEventId}
         onSelectEvent={handleSelectEvent}
         onCreateEvent={handleCreateEvent}
+        onUpdateEvent={handleUpdateEvent}
       />
     </div>
   );

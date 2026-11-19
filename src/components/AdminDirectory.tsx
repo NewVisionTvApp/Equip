@@ -11,6 +11,7 @@ import {
   Printer,
 } from "lucide-react";
 import { SEED_PARTICIPANTS } from "@/db/seed-data";
+import { SessionConfig } from "@/lib/store";
 import PrintableBadgeModal from "./PrintableBadgeModal";
 
 interface AdminDirectoryProps {
@@ -19,6 +20,7 @@ interface AdminDirectoryProps {
   onOpenSessionAttendance: () => void;
   activeEventName?: string;
   attendeesData?: any[];
+  sessionsData?: SessionConfig[];
   onToggleSession?: (participantId: string, sessionKey: string) => void;
 }
 
@@ -28,6 +30,7 @@ export default function AdminDirectory({
   onOpenSessionAttendance,
   activeEventName = "Equip December 2026",
   attendeesData,
+  sessionsData,
   onToggleSession,
 }: AdminDirectoryProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -500,13 +503,19 @@ export default function AdminDirectory({
             <div className="flex flex-col gap-2">
               <span className="text-xs font-extrabold text-slate-900">5-Session Programme Attendance</span>
               <div className="flex flex-col gap-2">
-                {[
-                  { key: "mon_am", name: "Session 1: Monday Morning (Vision Keynote)" },
-                  { key: "mon_pm", name: "Session 2: Monday Evening (Impartation Plenary)" },
-                  { key: "tue_am", name: "Session 3: Tuesday Morning (Pastoral Clinic)" },
-                  { key: "tue_pm", name: "Session 4: Tuesday Evening (Signs & Wonders)" },
-                  { key: "wed_pm", name: "Session 5: Wednesday PM (Final Mantle Commissioning)" },
-                ].map((s) => {
+                {(sessionsData && sessionsData.length > 0
+                  ? sessionsData.map((s, idx) => ({
+                      key: s.key,
+                      name: `Session ${idx + 1}: ${s.short} (${s.name}) · Preacher: ${s.speaker}`,
+                    }))
+                  : [
+                      { key: "mon_am", name: "Session 1: Monday Morning" },
+                      { key: "mon_pm", name: "Session 2: Monday Evening" },
+                      { key: "tue_am", name: "Session 3: Tuesday Morning" },
+                      { key: "tue_pm", name: "Session 4: Tuesday Evening" },
+                      { key: "wed_pm", name: "Session 5: Wednesday PM" },
+                    ]
+                ).map((s) => {
                   const isChecked = (selectedParticipant.sessions as any)[s.key];
                   const time = (selectedParticipant.sessionTimes as any)[s.key];
                   return (

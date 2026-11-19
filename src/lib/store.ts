@@ -1,6 +1,17 @@
 import { SEED_PARTICIPANTS } from "@/db/seed-data";
 import { generateParticipantId } from "./id-generator";
 
+export interface SessionConfig {
+  key: "mon_am" | "mon_pm" | "tue_am" | "tue_pm" | "wed_pm";
+  name: string; // e.g. "Keynote Impartation & Vision Casting"
+  short: string; // e.g. "Mon AM"
+  day: string; // e.g. "Day 1 · Morning"
+  time: string; // e.g. "09:00 AM – 12:30 PM"
+  speaker: string; // Preacher / Minister Name (editable by admin)
+  hall: string; // Hall / Venue
+  capacity?: number;
+}
+
 export interface EquipEvent {
   id: string; // e.g. "2026-12-EQUIP"
   title: string;
@@ -9,6 +20,7 @@ export interface EquipEvent {
   startDate: string;
   endDate: string;
   status: "active" | "open" | "draft" | "completed";
+  sessions?: SessionConfig[];
 }
 
 export interface StoredParticipant {
@@ -60,6 +72,61 @@ interface PlatformState {
   attendance: Record<string, { attended: boolean; timestamp: string | null }>; // key: `${participantId}_${eventId}_${sessionKey}`
 }
 
+export function createDefaultSessions(): SessionConfig[] {
+  return [
+    {
+      key: "mon_am",
+      name: "Day 1 Morning Session: Keynote & Vision",
+      short: "Mon AM",
+      day: "Day 1 · Morning",
+      time: "09:00 AM – 12:30 PM",
+      speaker: "Guest Minister (TBA)",
+      hall: "Main Auditorium",
+      capacity: 200,
+    },
+    {
+      key: "mon_pm",
+      name: "Day 1 Evening Session: Impartation Plenary",
+      short: "Mon PM",
+      day: "Day 1 · Evening",
+      time: "05:30 PM – 08:30 PM",
+      speaker: "Guest Minister (TBA)",
+      hall: "Main Auditorium",
+      capacity: 200,
+    },
+    {
+      key: "tue_am",
+      name: "Day 2 Morning Session: Pastoral Governance",
+      short: "Tue AM",
+      day: "Day 2 · Morning",
+      time: "09:00 AM – 12:30 PM",
+      speaker: "Guest Minister (TBA)",
+      hall: "Synod Hall A",
+      capacity: 200,
+    },
+    {
+      key: "tue_pm",
+      name: "Day 2 Evening Session: Signs & Leadership Mantle",
+      short: "Tue PM",
+      day: "Day 2 · Evening",
+      time: "05:30 PM – 08:30 PM",
+      speaker: "Guest Minister (TBA)",
+      hall: "Main Auditorium",
+      capacity: 200,
+    },
+    {
+      key: "wed_pm",
+      name: "Day 3 Grand Finale: Final Commissioning",
+      short: "Wed PM",
+      day: "Day 3 · Grand Finale",
+      time: "05:00 PM – 08:30 PM",
+      speaker: "Apostolic Council (TBA)",
+      hall: "Main Auditorium",
+      capacity: 200,
+    },
+  ];
+}
+
 function getInitialState(): PlatformState {
   const initialEvents: EquipEvent[] = [
     {
@@ -70,6 +137,58 @@ function getInitialState(): PlatformState {
       startDate: "2026-12-14",
       endDate: "2026-12-16",
       status: "active",
+      sessions: [
+        {
+          key: "mon_am",
+          name: "Keynote Impartation & Vision Casting",
+          short: "Mon AM",
+          day: "Day 1 · Morning",
+          time: "09:00 AM – 12:30 PM",
+          speaker: "Bishop / Guest Minister",
+          hall: "Main Auditorium",
+          capacity: 200,
+        },
+        {
+          key: "mon_pm",
+          name: "Evening Anointing & Deliverance Plenary",
+          short: "Mon PM",
+          day: "Day 1 · Evening",
+          time: "05:30 PM – 08:30 PM",
+          speaker: "Bishop / Preacher",
+          hall: "Main Auditorium",
+          capacity: 200,
+        },
+        {
+          key: "tue_am",
+          name: "Pastoral Governance & Ministry Ethics",
+          short: "Tue AM",
+          day: "Day 2 · Morning",
+          time: "09:00 AM – 12:30 PM",
+          speaker: "Guest Minister",
+          hall: "Synod Hall A",
+          capacity: 200,
+        },
+        {
+          key: "tue_pm",
+          name: "Signs, Wonders & Leadership Mantle",
+          short: "Tue PM",
+          day: "Day 2 · Evening",
+          time: "05:30 PM – 08:30 PM",
+          speaker: "Guest Minister",
+          hall: "Main Auditorium",
+          capacity: 200,
+        },
+        {
+          key: "wed_pm",
+          name: "Final Mantle Impartation & Commissioning",
+          short: "Wed PM",
+          day: "Day 3 · Grand Finale",
+          time: "05:00 PM – 08:30 PM",
+          speaker: "Presiding Council",
+          hall: "Main Auditorium",
+          capacity: 200,
+        },
+      ],
     },
     {
       id: "2027-01-EQUIP",
@@ -79,6 +198,7 @@ function getInitialState(): PlatformState {
       startDate: "2027-01-11",
       endDate: "2027-01-13",
       status: "open",
+      sessions: createDefaultSessions(),
     },
     {
       id: "2027-02-EQUIP",
@@ -88,6 +208,7 @@ function getInitialState(): PlatformState {
       startDate: "2027-02-08",
       endDate: "2027-02-10",
       status: "draft",
+      sessions: createDefaultSessions(),
     },
   ];
 
@@ -372,6 +493,68 @@ export function toggleSessionAttendanceRecord(
         timestamp: newTimestamp,
       },
     },
+  };
+
+  savePlatformState(newState);
+  return newState;
+}
+
+// Helper: Update Event (Title, Theme, Dates, Status, Sessions)
+export function updateEventRecord(
+  state: PlatformState,
+  eventId: string,
+  partial: Partial<EquipEvent>
+): PlatformState {
+  const updatedEvents = state.events.map((ev) => {
+    if (ev.id === eventId) {
+      return {
+        ...ev,
+        ...partial,
+      };
+    }
+    return ev;
+  });
+
+  const newState: PlatformState = {
+    ...state,
+    events: updatedEvents,
+  };
+
+  savePlatformState(newState);
+  return newState;
+}
+
+// Helper: Update a specific session's speaker/preacher, topic, time, or venue
+export function updateEventSessionRecord(
+  state: PlatformState,
+  eventId: string,
+  sessionKey: string,
+  sessionData: Partial<SessionConfig>
+): PlatformState {
+  const updatedEvents = state.events.map((ev) => {
+    if (ev.id === eventId) {
+      const currentSessions = ev.sessions || createDefaultSessions();
+      const updatedSessions = currentSessions.map((s) => {
+        if (s.key === sessionKey) {
+          return {
+            ...s,
+            ...sessionData,
+          };
+        }
+        return s;
+      });
+
+      return {
+        ...ev,
+        sessions: updatedSessions,
+      };
+    }
+    return ev;
+  });
+
+  const newState: PlatformState = {
+    ...state,
+    events: updatedEvents,
   };
 
   savePlatformState(newState);

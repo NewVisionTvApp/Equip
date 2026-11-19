@@ -22,8 +22,11 @@ import {
   Check,
   Smartphone,
   Sparkles,
+  Pencil,
 } from "lucide-react";
 import { SEED_PARTICIPANTS } from "@/db/seed-data";
+import { SessionConfig } from "@/lib/store";
+import EditSessionModal from "./EditSessionModal";
 
 // The 5 Gathering Sessions
 const SESSIONS = [
@@ -113,6 +116,8 @@ interface DashboardProps {
   totalRegistrations?: number;
   ordainedCount?: number;
   attendeesData?: any[];
+  sessionsData?: SessionConfig[];
+  onUpdateSession?: (sessionKey: string, sessionData: Partial<SessionConfig>) => void;
 }
 
 export default function Dashboard({
@@ -125,6 +130,8 @@ export default function Dashboard({
   totalRegistrations,
   ordainedCount,
   attendeesData,
+  sessionsData,
+  onUpdateSession,
 }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSessionKey, setSelectedSessionKey] = useState("mon_pm");
@@ -132,6 +139,7 @@ export default function Dashboard({
   const [fastScanId, setFastScanId] = useState("");
   const [scanFeedback, setScanFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [recentlyToggledId, setRecentlyToggledId] = useState<string | null>(null);
+  const [editingSession, setEditingSession] = useState<SessionConfig | null>(null);
 
   // Attendees State with initial realistic statuses (using attendeesData when available)
   const [attendees, setAttendees] = useState(() =>
@@ -154,10 +162,23 @@ export default function Dashboard({
         }))
   );
 
-  // Active Session Object
+  // Active Session Object (dynamically reflects admin configured preachers & topics)
+  const sessionList = useMemo(() => {
+    if (sessionsData && sessionsData.length > 0) {
+      return sessionsData.map((s, idx) => {
+        const matchingSeed = SESSIONS[idx] || SESSIONS[0];
+        return {
+          ...matchingSeed,
+          ...s,
+        };
+      });
+    }
+    return SESSIONS;
+  }, [sessionsData]);
+
   const currentSession = useMemo(
-    () => SESSIONS.find((s) => s.key === selectedSessionKey) || SESSIONS[1],
-    [selectedSessionKey]
+    () => sessionList.find((s) => s.key === selectedSessionKey) || sessionList[1],
+    [sessionList, selectedSessionKey]
   );
 
   // Timer State (Countdown to session end or next event)
@@ -731,9 +752,20 @@ export default function Dashboard({
           {/* Col 2 (4 cols): Current Session Focus */}
           <div className="lg:col-span-4 bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring flex flex-col justify-between h-64">
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                CURRENT SESSION
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  CURRENT SESSION
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setEditingSession(currentSession as any)}
+                  className="px-2 py-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-[#0F472A] border border-emerald-200/70 transition-colors flex items-center gap-1 text-[10px] font-bold shadow-2xs"
+                  title="Customize preacher name, topic, or venue"
+                >
+                  <Pencil className="w-2.5 h-2.5" />
+                  <span>Edit Preacher</span>
+                </button>
+              </div>
               <h3 className="text-base font-extrabold text-slate-900 leading-snug tracking-tight">
                 {currentSession.name}
               </h3>
@@ -1056,6 +1088,18 @@ export default function Dashboard({
           )}
         </section>
       </main>
+
+      {/* Edit Session Modal for Preachers & Topics */}
+      <EditSessionModal
+        isOpen={Boolean(editingSession)}
+        onClose={() => setEditingSession(null)}
+        session={editingSession}
+        onSave={(key, updatedData) => {
+          if (onUpdateSession) {
+            onUpdateSession(key, updatedData);
+          }
+        }}
+      />
     </div>
   );
 }

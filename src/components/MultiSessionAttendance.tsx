@@ -8,9 +8,12 @@ import {
   Check,
   Printer,
   Plus,
+  Pencil,
 } from "lucide-react";
 import { SEED_PARTICIPANTS } from "@/db/seed-data";
+import { SessionConfig } from "@/lib/store";
 import PrintableBadgeModal from "./PrintableBadgeModal";
+import EditSessionModal from "./EditSessionModal";
 
 interface MultiSessionAttendanceProps {
   onBackToDashboard: () => void;
@@ -19,7 +22,9 @@ interface MultiSessionAttendanceProps {
   activeEventName?: string;
   activeEventId?: string;
   rosterData?: any[];
+  sessionsData?: SessionConfig[];
   onToggleAttendance?: (participantId: string, sessionKey: string) => void;
+  onUpdateSession?: (sessionKey: string, sessionData: Partial<SessionConfig>) => void;
 }
 
 const SESSIONS_DATA = [
@@ -81,13 +86,16 @@ export default function MultiSessionAttendance({
   onOpenRegister,
   activeEventName = "Equip December 2026",
   rosterData,
+  sessionsData,
   onToggleAttendance,
+  onUpdateSession,
 }: MultiSessionAttendanceProps) {
   const [activeSessionKey, setActiveSessionKey] = useState("mon_pm");
   const [searchQuery, setSearchQuery] = useState("");
   const [fastScanInput, setFastScanInput] = useState("");
   const [scanAlert, setScanAlert] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [badgeParticipant, setBadgeParticipant] = useState<any | null>(null);
+  const [editingSession, setEditingSession] = useState<SessionConfig | null>(null);
 
   // Attendees with session attendance map (using rosterData if provided, or default seeds)
   const [internalRoster, setInternalRoster] = useState(() =>
@@ -122,9 +130,19 @@ export default function MultiSessionAttendance({
 
   const roster = rosterData || internalRoster;
 
+  const sessions = useMemo(() => {
+    if (sessionsData && sessionsData.length > 0) {
+      return sessionsData.map((s, idx) => ({
+        ...(SESSIONS_DATA[idx] || SESSIONS_DATA[0]),
+        ...s,
+      }));
+    }
+    return SESSIONS_DATA;
+  }, [sessionsData]);
+
   const activeSession = useMemo(
-    () => SESSIONS_DATA.find((s) => s.key === activeSessionKey) || SESSIONS_DATA[1],
-    [activeSessionKey]
+    () => sessions.find((s) => s.key === activeSessionKey) || sessions[1],
+    [sessions, activeSessionKey]
   );
 
   // Audio feedback
@@ -379,7 +397,18 @@ export default function MultiSessionAttendance({
           </div>
 
           <div className="flex flex-col gap-1 z-10">
-            <h2 className="text-lg font-extrabold text-white leading-snug">{activeSession.name}</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-extrabold text-white leading-snug">{activeSession.name}</h2>
+              <button
+                type="button"
+                onClick={() => setEditingSession(activeSession as any)}
+                className="px-2 py-0.5 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-colors flex items-center gap-1 text-[10px] font-bold border border-white/20 shrink-0"
+                title="Edit Preacher Name & Session Topic"
+              >
+                <Pencil className="w-2.5 h-2.5 text-[#A3E635]" />
+                <span>Edit Preacher</span>
+              </button>
+            </div>
             <p className="text-xs text-emerald-200">
               Presider: <strong className="text-white">{activeSession.speaker}</strong> · {activeSession.time}
             </p>
@@ -562,6 +591,18 @@ export default function MultiSessionAttendance({
         onClose={() => setBadgeParticipant(null)}
         participant={badgeParticipant}
         eventName={activeEventName}
+      />
+
+      {/* Edit Session Modal for Preachers & Topics */}
+      <EditSessionModal
+        isOpen={Boolean(editingSession)}
+        onClose={() => setEditingSession(null)}
+        session={editingSession}
+        onSave={(key, updatedData) => {
+          if (onUpdateSession) {
+            onUpdateSession(key, updatedData);
+          }
+        }}
       />
     </div>
   );
