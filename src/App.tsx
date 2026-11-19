@@ -4,56 +4,89 @@ import RegistrationFlow from "./components/RegistrationFlow";
 import AdminDirectory from "./components/AdminDirectory";
 import MultiSessionAttendance from "./components/MultiSessionAttendance";
 import EventModal, { EquipEvent } from "./components/EventModal";
-import { Calendar, ChevronDown } from "lucide-react";
+import { Calendar, ChevronDown, RotateCcw } from "lucide-react";
+import {
+  loadPlatformState,
+  savePlatformState,
+  resetPlatformState,
+  getAttendeesForEvent,
+  registerParticipantForEvent,
+  toggleSessionAttendanceRecord,
+} from "./lib/store";
 
 export default function App() {
   const [view, setView] = useState<"dashboard" | "directory" | "attendance" | "register">("dashboard");
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-
-  // Monthly Recurring Events State
-  const [events, setEvents] = useState<EquipEvent[]>([
-    {
-      id: "2026-12-EQUIP",
-      title: "Equip December 2026: Apostolic Mantles & Spiritual Leadership",
-      theme: "Apostolic Mantles & Spiritual Leadership",
-      monthYear: "December 2026",
-      startDate: "2026-12-14",
-      endDate: "2026-12-16",
-      status: "active",
-      registeredCount: 184,
-    },
-    {
-      id: "2027-01-EQUIP",
-      title: "Equip January 2027: Apostolic Foundation & Ministerial Alignment",
-      theme: "Apostolic Foundation & Ministerial Alignment",
-      monthYear: "January 2027",
-      startDate: "2027-01-11",
-      endDate: "2027-01-13",
-      status: "open",
-      registeredCount: 0,
-    },
-    {
-      id: "2027-02-EQUIP",
-      title: "Equip February 2027: Evangelical Fire & Church Growth",
-      theme: "Evangelical Fire & Church Growth",
-      monthYear: "February 2027",
-      startDate: "2027-02-08",
-      endDate: "2027-02-10",
-      status: "draft",
-      registeredCount: 0,
-    },
-  ]);
-
-  const [activeEventId, setActiveEventId] = useState<string>("2026-12-EQUIP");
+  const [platformState, setPlatformState] = useState(() => loadPlatformState());
 
   const activeEvent = useMemo(
-    () => events.find((e) => e.id === activeEventId) || events[0],
-    [events, activeEventId]
+    () => platformState.events.find((e) => e.id === platformState.activeEventId) || platformState.events[0],
+    [platformState.events, platformState.activeEventId]
   );
 
+  // Active attendees for the selected monthly event
+  const activeAttendees = useMemo(
+    () => getAttendeesForEvent(platformState, activeEvent.id),
+    [platformState, activeEvent.id]
+  );
+
+  const ordainedCount = useMemo(
+    () => activeAttendees.filter((a) => a.isOrdained).length,
+    [activeAttendees]
+  );
+
+  // Events list with dynamic registration count
+  const dynamicEvents = useMemo(() => {
+    return platformState.events.map((ev) => ({
+      ...ev,
+      registeredCount: platformState.registrations.filter((r) => r.eventId === ev.id).length,
+    }));
+  }, [platformState.events, platformState.registrations]);
+
+  const handleSelectEvent = (eventId: string) => {
+    const updated = { ...platformState, activeEventId: eventId };
+    setPlatformState(updated);
+    savePlatformState(updated);
+  };
+
   const handleCreateEvent = (newEvent: EquipEvent) => {
-    setEvents((prev) => [...prev, newEvent]);
-    setActiveEventId(newEvent.id);
+    const updated = {
+      ...platformState,
+      events: [...platformState.events, newEvent],
+      activeEventId: newEvent.id,
+    };
+    setPlatformState(updated);
+    savePlatformState(updated);
+  };
+
+  const handleRegisterParticipant = (participantData: any, _isReturning: boolean = false) => {
+    const res = registerParticipantForEvent(platformState, {
+      fullName: participantData.fullName,
+      phone: participantData.phone,
+      email: participantData.email,
+      churchName: participantData.churchName,
+      roleOffice: participantData.roleOffice,
+      location: participantData.location || "Lagos",
+      eventId: activeEvent.id,
+    });
+    setPlatformState(res.state);
+  };
+
+  const handleToggleAttendance = (participantId: string, sessionKey: string) => {
+    const updated = toggleSessionAttendanceRecord(
+      platformState,
+      participantId,
+      activeEvent.id,
+      sessionKey
+    );
+    setPlatformState(updated);
+  };
+
+  const handleResetData = () => {
+    if (confirm("Reset demo data back to initial seed state with 184 registrations?")) {
+      const reset = resetPlatformState();
+      setPlatformState(reset);
+    }
   };
 
   return (
@@ -101,7 +134,7 @@ export default function App() {
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            Directory ({activeEvent.registeredCount})
+            Directory ({activeAttendees.length})
           </button>
 
           <button
@@ -127,6 +160,16 @@ export default function App() {
           >
             Public Register
           </button>
+
+          {/* Reset Demo Data Pill */}
+          <button
+            type="button"
+            onClick={handleResetData}
+            title="Reset platform demo data"
+            className="p-1 text-slate-500 hover:text-slate-300 transition-colors ml-1"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
@@ -140,6 +183,9 @@ export default function App() {
           activeEventName={activeEvent.title}
           activeEventTheme={activeEvent.theme}
           activeEventMonthYear={activeEvent.monthYear}
+          totalRegistrations={activeAttendees.length}
+          ordainedCount={ordainedCount}
+          attendeesData={activeAttendees}
         />
       )}
 
@@ -149,6 +195,8 @@ export default function App() {
           onOpenRegister={() => setView("register")}
           onOpenSessionAttendance={() => setView("attendance")}
           activeEventName={activeEvent.title}
+          attendeesData={activeAttendees}
+          onToggleSession={handleToggleAttendance}
         />
       )}
 
@@ -156,6 +204,11 @@ export default function App() {
         <MultiSessionAttendance
           onBackToDashboard={() => setView("dashboard")}
           onOpenDirectory={() => setView("directory")}
+          onOpenRegister={() => setView("register")}
+          activeEventName={activeEvent.title}
+          activeEventId={activeEvent.id}
+          rosterData={activeAttendees}
+          onToggleAttendance={handleToggleAttendance}
         />
       )}
 
@@ -163,6 +216,9 @@ export default function App() {
         <RegistrationFlow
           onBackToDashboard={() => setView("dashboard")}
           activeEventName={activeEvent.title}
+          activeEventId={activeEvent.id}
+          existingParticipants={platformState.participants}
+          onParticipantRegistered={handleRegisterParticipant}
         />
       )}
 
@@ -170,9 +226,9 @@ export default function App() {
       <EventModal
         isOpen={isEventModalOpen}
         onClose={() => setIsEventModalOpen(false)}
-        events={events}
-        activeEventId={activeEventId}
-        onSelectEvent={(eventId) => setActiveEventId(eventId)}
+        events={dynamicEvents}
+        activeEventId={platformState.activeEventId}
+        onSelectEvent={handleSelectEvent}
         onCreateEvent={handleCreateEvent}
       />
     </div>

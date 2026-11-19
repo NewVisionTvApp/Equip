@@ -6,12 +6,20 @@ import {
   Download,
   QrCode,
   Check,
+  Printer,
+  Plus,
 } from "lucide-react";
 import { SEED_PARTICIPANTS } from "@/db/seed-data";
+import PrintableBadgeModal from "./PrintableBadgeModal";
 
 interface MultiSessionAttendanceProps {
   onBackToDashboard: () => void;
   onOpenDirectory: () => void;
+  onOpenRegister?: () => void;
+  activeEventName?: string;
+  activeEventId?: string;
+  rosterData?: any[];
+  onToggleAttendance?: (participantId: string, sessionKey: string) => void;
 }
 
 const SESSIONS_DATA = [
@@ -70,14 +78,19 @@ const SESSIONS_DATA = [
 export default function MultiSessionAttendance({
   onBackToDashboard,
   onOpenDirectory,
+  onOpenRegister,
+  activeEventName = "Equip December 2026",
+  rosterData,
+  onToggleAttendance,
 }: MultiSessionAttendanceProps) {
   const [activeSessionKey, setActiveSessionKey] = useState("mon_pm");
   const [searchQuery, setSearchQuery] = useState("");
   const [fastScanInput, setFastScanInput] = useState("");
   const [scanAlert, setScanAlert] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [badgeParticipant, setBadgeParticipant] = useState<any | null>(null);
 
-  // Attendees with session attendance map
-  const [roster, setRoster] = useState(() =>
+  // Attendees with session attendance map (using rosterData if provided, or default seeds)
+  const [internalRoster, setInternalRoster] = useState(() =>
     SEED_PARTICIPANTS.map((p, idx) => {
       const isOrdained =
         p.roleOffice.toLowerCase().includes("pastor") ||
@@ -107,6 +120,8 @@ export default function MultiSessionAttendance({
     })
   );
 
+  const roster = rosterData || internalRoster;
+
   const activeSession = useMemo(
     () => SESSIONS_DATA.find((s) => s.key === activeSessionKey) || SESSIONS_DATA[1],
     [activeSessionKey]
@@ -134,10 +149,13 @@ export default function MultiSessionAttendance({
   // Toggle single session check-in
   const toggleAttendance = (participantId: string, sessionKey: string) => {
     playHapticAudio();
-    setRoster((prev) =>
+    if (onToggleAttendance) {
+      onToggleAttendance(participantId, sessionKey);
+    }
+    setInternalRoster((prev) =>
       prev.map((p) => {
         if (p.id === participantId) {
-          const current = (p.attendance as any)[sessionKey];
+          const current = (p.attendance as any)?.[sessionKey];
           return {
             ...p,
             attendance: {
@@ -275,6 +293,18 @@ export default function MultiSessionAttendance({
         </div>
 
         <div className="flex items-center gap-3">
+          {onOpenRegister && (
+            <button
+              type="button"
+              onClick={onOpenRegister}
+              className="h-9 px-3.5 bg-emerald-50 text-[#0F472A] hover:bg-emerald-100 border border-emerald-200/80 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs"
+              title="Register a walk-in attendee on the spot"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Walk-in Registration</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onOpenDirectory}
@@ -444,6 +474,7 @@ export default function MultiSessionAttendance({
                 <th className="py-3 px-4 text-center">Tue AM</th>
                 <th className="py-3 px-4 text-center">Tue PM</th>
                 <th className="py-3 px-4 text-center">Wed PM</th>
+                <th className="py-3 px-4 text-right">Badge</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
@@ -486,7 +517,7 @@ export default function MultiSessionAttendance({
 
                     {/* 5 Sessions Toggles */}
                     {["mon_am", "mon_pm", "tue_am", "tue_pm", "wed_pm"].map((sKey) => {
-                      const isAttended = (p.attendance as any)[sKey];
+                      const isAttended = (p.attendance as any)?.[sKey];
                       const isCurrentSessionColumn = activeSessionKey === sKey;
 
                       return (
@@ -505,6 +536,18 @@ export default function MultiSessionAttendance({
                         </td>
                       );
                     })}
+
+                    {/* Print Badge Action */}
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setBadgeParticipant(p)}
+                        className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-colors"
+                        title="Print Physical Lanyard Badge / Slip"
+                      >
+                        <Printer className="w-4 h-4" />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -512,6 +555,14 @@ export default function MultiSessionAttendance({
           </table>
         </div>
       </div>
+
+      {/* Physical Badge Modal */}
+      <PrintableBadgeModal
+        isOpen={Boolean(badgeParticipant)}
+        onClose={() => setBadgeParticipant(null)}
+        participant={badgeParticipant}
+        eventName={activeEventName}
+      />
     </div>
   );
 }

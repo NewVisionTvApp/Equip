@@ -110,6 +110,9 @@ interface DashboardProps {
   activeEventName?: string;
   activeEventTheme?: string;
   activeEventMonthYear?: string;
+  totalRegistrations?: number;
+  ordainedCount?: number;
+  attendeesData?: any[];
 }
 
 export default function Dashboard({
@@ -119,6 +122,9 @@ export default function Dashboard({
   onOpenEventModal,
   activeEventTheme = "Apostolic Mantles & Spiritual Leadership",
   activeEventMonthYear = "December 2026",
+  totalRegistrations,
+  ordainedCount,
+  attendeesData,
 }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSessionKey, setSelectedSessionKey] = useState("mon_pm");
@@ -127,19 +133,25 @@ export default function Dashboard({
   const [scanFeedback, setScanFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [recentlyToggledId, setRecentlyToggledId] = useState<string | null>(null);
 
-  // Attendees State with initial realistic statuses
-  const [attendees, setAttendees] = useState(
-    SEED_PARTICIPANTS.map((p, idx) => ({
-      ...p,
-      checkedIn: idx < 7,
-      checkedInAt: idx < 7 ? `08:${40 + (idx * 3)} AM` : null,
-      isOrdained:
-        p.roleOffice.toLowerCase().includes("pastor") ||
-        p.roleOffice.toLowerCase().includes("bishop") ||
-        p.roleOffice.toLowerCase().includes("reverend") ||
-        p.roleOffice.toLowerCase().includes("minister") ||
-        p.roleOffice.toLowerCase().includes("apostle"),
-    }))
+  // Attendees State with initial realistic statuses (using attendeesData when available)
+  const [attendees, setAttendees] = useState(() =>
+    attendeesData && attendeesData.length > 0
+      ? attendeesData.map((a, idx) => ({
+          ...a,
+          checkedIn: idx < 7,
+          checkedInAt: idx < 7 ? `08:${40 + (idx * 3)} AM` : null,
+        }))
+      : SEED_PARTICIPANTS.map((p, idx) => ({
+          ...p,
+          checkedIn: idx < 7,
+          checkedInAt: idx < 7 ? `08:${40 + (idx * 3)} AM` : null,
+          isOrdained:
+            p.roleOffice.toLowerCase().includes("pastor") ||
+            p.roleOffice.toLowerCase().includes("bishop") ||
+            p.roleOffice.toLowerCase().includes("reverend") ||
+            p.roleOffice.toLowerCase().includes("minister") ||
+            p.roleOffice.toLowerCase().includes("apostle"),
+        }))
   );
 
   // Active Session Object
@@ -579,13 +591,13 @@ export default function Dashboard({
 
             <div className="flex flex-col gap-1 z-10">
               <span className="text-3xl font-extrabold text-white tracking-[-0.04em] tabular-nums">
-                184
+                {totalRegistrations !== undefined ? totalRegistrations : 184}
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="bg-[#A3E635] text-[#0F472A] text-[10px] font-black px-1.5 py-0.5 rounded shadow-2xs">
-                  +38
+                  Active
                 </span>
-                <span className="text-[11px] text-[#DCFCE7] font-medium">Registered this week</span>
+                <span className="text-[11px] text-[#DCFCE7] font-medium">Programme Roster</span>
               </div>
             </div>
           </div>
@@ -600,11 +612,11 @@ export default function Dashboard({
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-3xl font-extrabold text-slate-900 tracking-[-0.04em] tabular-nums">
-                72
+                {ordainedCount !== undefined ? ordainedCount : 72}
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                  39.1%
+                  {totalRegistrations ? `${Math.round(((ordainedCount ?? 72) / totalRegistrations) * 100)}%` : "39.1%"}
                 </span>
                 <span className="text-[11px] text-slate-400">Bishops & Pastors</span>
               </div>

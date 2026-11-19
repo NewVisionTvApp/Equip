@@ -26,14 +26,17 @@ import PrintableBadgeModal from "./PrintableBadgeModal";
 
 interface RegistrationFlowProps {
   onBackToDashboard: () => void;
-  onParticipantRegistered?: (participant: SyntheticParticipantSeed) => void;
+  onParticipantRegistered?: (participant: any, isReturning?: boolean) => void;
   activeEventName?: string;
+  activeEventId?: string;
+  existingParticipants?: Record<string, any>;
 }
 
 export default function RegistrationFlow({
   onBackToDashboard,
   onParticipantRegistered,
   activeEventName = "Equip December 2026",
+  existingParticipants,
 }: RegistrationFlowProps) {
   // Navigation / View Modes
   const [mode, setMode] = useState<"register" | "returning" | "signin" | "confirmed">("register");
@@ -158,17 +161,21 @@ export default function RegistrationFlow({
     if (!lookupQuery.trim()) return;
 
     const q = lookupQuery.trim().toUpperCase();
-    const found = SEED_PARTICIPANTS.find(
-      (p) =>
+    const candidateList = existingParticipants
+      ? Object.values(existingParticipants)
+      : SEED_PARTICIPANTS;
+
+    const found = candidateList.find(
+      (p: any) =>
         p.id.toUpperCase() === q ||
-        p.phone.includes(q) ||
-        p.email.toUpperCase().includes(q) ||
+        p.phone.replace(/\s+/g, "").includes(q.replace(/\s+/g, "")) ||
+        (p.email && p.email.toUpperCase().includes(q)) ||
         p.fullName.toUpperCase().includes(q)
     );
 
     if (found) {
       playHapticAudio();
-      setLookupResult(found);
+      setLookupResult(found as any);
       setLookupError(null);
     } else {
       setLookupResult(null);
@@ -180,6 +187,10 @@ export default function RegistrationFlow({
   const handleConfirmReturning = () => {
     if (!lookupResult) return;
     playHapticAudio();
+
+    if (onParticipantRegistered) {
+      onParticipantRegistered(lookupResult, true);
+    }
 
     const isOrdained =
       lookupResult.roleOffice.toLowerCase().includes("pastor") ||
@@ -194,7 +205,7 @@ export default function RegistrationFlow({
       churchName: lookupResult.churchName,
       isOrdained,
       location: lookupResult.location || "Lagos",
-      date: "December 7 – 9, 2026",
+      date: activeEventName,
     });
 
     setMode("confirmed");

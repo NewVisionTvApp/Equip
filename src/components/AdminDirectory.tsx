@@ -18,6 +18,8 @@ interface AdminDirectoryProps {
   onOpenRegister: () => void;
   onOpenSessionAttendance: () => void;
   activeEventName?: string;
+  attendeesData?: any[];
+  onToggleSession?: (participantId: string, sessionKey: string) => void;
 }
 
 export default function AdminDirectory({
@@ -25,6 +27,8 @@ export default function AdminDirectory({
   onOpenRegister,
   onOpenSessionAttendance,
   activeEventName = "Equip December 2026",
+  attendeesData,
+  onToggleSession,
 }: AdminDirectoryProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "pastors" | "members" | "host" | "visiting">("all");
@@ -63,9 +67,11 @@ export default function AdminDirectory({
     })
   );
 
+  const dataSource = attendeesData || directoryData;
+
   // Filter logic
   const filteredData = useMemo(() => {
-    return directoryData.filter((p) => {
+    return dataSource.filter((p) => {
       if (roleFilter === "pastors" && !p.isOrdained) return false;
       if (roleFilter === "members" && p.isOrdained) return false;
       if (roleFilter === "host" && !p.isHostChurch) return false;
@@ -114,6 +120,9 @@ export default function AdminDirectory({
   // Toggle individual session for selected participant
   const toggleSessionForParticipant = (participantId: string, sessionKey: string) => {
     playHapticAudio();
+    if (onToggleSession) {
+      onToggleSession(participantId, sessionKey);
+    }
     setDirectoryData((prev) =>
       prev.map((p) => {
         if (p.id === participantId) {
