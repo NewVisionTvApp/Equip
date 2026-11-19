@@ -18,12 +18,8 @@ import {
   RotateCcw,
   Download,
   CheckCircle2,
-  Clock,
-  Radio,
   Award,
-  ChevronRight,
   Check,
-  UserCheck,
   Smartphone,
 } from "lucide-react";
 import { SEED_PARTICIPANTS } from "@/db/seed-data";
@@ -40,8 +36,7 @@ const SESSIONS = [
     hall: "Main Auditorium",
     checkedIn: 148,
     total: 184,
-    color: "#0F472A",
-    barHeight: "h-24",
+    percent: 80,
     status: "Completed",
   },
   {
@@ -54,8 +49,7 @@ const SESSIONS = [
     hall: "Main Auditorium",
     checkedIn: 162,
     total: 184,
-    color: "#166534",
-    barHeight: "h-28",
+    percent: 88,
     status: "Active Now",
   },
   {
@@ -68,8 +62,7 @@ const SESSIONS = [
     hall: "Synod Hall A",
     checkedIn: 154,
     total: 184,
-    color: "#10B981",
-    barHeight: "h-26",
+    percent: 84,
     status: "Upcoming",
   },
   {
@@ -82,8 +75,7 @@ const SESSIONS = [
     hall: "Main Auditorium",
     checkedIn: 170,
     total: 184,
-    color: "#84CC16",
-    barHeight: "h-32",
+    percent: 92,
     status: "Upcoming",
   },
   {
@@ -96,26 +88,23 @@ const SESSIONS = [
     hall: "Main Auditorium",
     checkedIn: 178,
     total: 184,
-    color: "#0F472A",
-    barHeight: "h-36",
+    percent: 97,
     status: "Upcoming",
   },
 ];
 
 // Delegation breakdown
 const DELEGATIONS = [
-  { name: "Grace Covenant Sanctuary (Host)", count: 68, pastors: 24, percent: 100, color: "bg-[#0F472A]" },
-  { name: "Faith Apostolic Church", count: 34, pastors: 16, percent: 88, color: "bg-[#166534]" },
-  { name: "Living Streams Assembly", count: 28, pastors: 12, percent: 75, color: "bg-[#84CC16]" },
-  { name: "Redeemed Glory Center", count: 22, pastors: 10, percent: 82, color: "bg-emerald-500" },
-  { name: "Christ Ambassadors Fellowship", count: 18, pastors: 6, percent: 67, color: "bg-teal-600" },
-  { name: "Independent Visiting Ministers", count: 14, pastors: 4, percent: 71, color: "bg-lime-600" },
+  { name: "Grace Covenant (Host)", count: 68, dot: "bg-[#0F472A]", type: "Host Ministry" },
+  { name: "Faith Apostolic Church", count: 34, dot: "bg-[#166534]", type: "Visiting Delegation" },
+  { name: "Living Streams Assembly", count: 28, dot: "bg-[#84CC16]", type: "Visiting Delegation" },
+  { name: "Redeemed Glory Center", count: 22, dot: "bg-emerald-500", type: "Visiting Delegation" },
 ];
 
 export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () => void }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSessionKey, setSelectedSessionKey] = useState("mon_pm");
-  const [activeFilterTab, setActiveFilterTab] = useState<"all" | "pastors" | "members" | "checked_in" | "pending">("all");
+  const [activeFilterTab, setActiveFilterTab] = useState<"all" | "pastors" | "members" | "checked_in">("all");
   const [fastScanId, setFastScanId] = useState("");
   const [scanFeedback, setScanFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
@@ -125,11 +114,12 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
       ...p,
       checkedIn: idx < 7,
       checkedInAt: idx < 7 ? `08:${40 + (idx * 3)} AM` : null,
-      isOrdained: p.roleOffice.toLowerCase().includes("pastor") ||
-                  p.roleOffice.toLowerCase().includes("bishop") ||
-                  p.roleOffice.toLowerCase().includes("reverend") ||
-                  p.roleOffice.toLowerCase().includes("minister") ||
-                  p.roleOffice.toLowerCase().includes("apostle"),
+      isOrdained:
+        p.roleOffice.toLowerCase().includes("pastor") ||
+        p.roleOffice.toLowerCase().includes("bishop") ||
+        p.roleOffice.toLowerCase().includes("reverend") ||
+        p.roleOffice.toLowerCase().includes("minister") ||
+        p.roleOffice.toLowerCase().includes("apostle"),
     }))
   );
 
@@ -161,13 +151,10 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
   // Filter attendees by Tab & Search
   const filteredAttendees = useMemo(() => {
     return attendees.filter((a) => {
-      // Tab filter
       if (activeFilterTab === "pastors" && !a.isOrdained) return false;
       if (activeFilterTab === "members" && a.isOrdained) return false;
       if (activeFilterTab === "checked_in" && !a.checkedIn) return false;
-      if (activeFilterTab === "pending" && a.checkedIn) return false;
 
-      // Query filter
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return (
@@ -205,35 +192,50 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
     if (!fastScanId.trim()) return;
 
     const cleaned = fastScanId.trim().toUpperCase();
-    const match = attendees.find((a) => a.id.toUpperCase() === cleaned || a.phone.includes(cleaned) || a.fullName.toUpperCase().includes(cleaned));
+    const match = attendees.find(
+      (a) =>
+        a.id.toUpperCase() === cleaned ||
+        a.phone.includes(cleaned) ||
+        a.fullName.toUpperCase().includes(cleaned)
+    );
 
     if (match) {
       if (match.checkedIn) {
         setScanFeedback({
-          message: `${match.fullName} (${match.id}) is ALREADY verified!`,
+          message: `${match.fullName} (${match.id}) is already verified!`,
           type: "success",
         });
       } else {
         toggleCheckIn(match.id);
         setScanFeedback({
-          message: `SUCCESS: ${match.fullName} (${match.roleOffice}) checked in!`,
+          message: `Verified: ${match.fullName} (${match.roleOffice}) checked in!`,
           type: "success",
         });
       }
       setFastScanId("");
     } else {
       setScanFeedback({
-        message: `No participant found matching "${fastScanId}". Check ID or register new.`,
+        message: `No participant matching "${fastScanId}". Check ID or register new.`,
         type: "error",
       });
     }
 
-    setTimeout(() => setScanFeedback(null), 4000);
+    setTimeout(() => setScanFeedback(null), 3500);
   };
 
   // Export CSV
   const handleExportCSV = () => {
-    const headers = ["Unique ID", "Full Name", "Phone", "Email", "Church", "Role / Office", "Location", "Checked In", "Check-in Time"];
+    const headers = [
+      "Unique ID",
+      "Full Name",
+      "Phone",
+      "Email",
+      "Church",
+      "Role / Office",
+      "Location",
+      "Checked In",
+      "Check-in Time",
+    ];
     const rows = attendees.map((a) => [
       a.id,
       `"${a.fullName}"`,
@@ -245,7 +247,9 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
       a.checkedIn ? "Yes" : "No",
       a.checkedInAt || "—",
     ]);
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -255,49 +259,43 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
     document.body.removeChild(link);
   };
 
-  // Dynamic calculated stats
   const totalRegistered = 184;
   const checkedInCount = currentSession.checkedIn;
   const turnoutPercent = Math.round((checkedInCount / totalRegistered) * 100);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 flex p-3 sm:p-5 md:p-6 gap-6 font-sans antialiased selection:bg-[#A3E635] selection:text-[#0F472A]">
-      {/* 1. LEFT SIDEBAR (Donezo + Apple Aesthetic) */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white rounded-3xl p-6 justify-between border border-slate-100/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] shrink-0">
-        <div className="flex flex-col gap-8">
+    <div className="min-h-screen bg-[#F4F6F8] text-slate-900 flex p-4 lg:p-6 gap-6 font-sans antialiased selection:bg-[#A3E635] selection:text-[#0F472A]">
+      {/* 1. LEFT SIDEBAR (Donezo Style: Rounded-2xl, crisp icons, dark green bottom card) */}
+      <aside className="hidden lg:flex flex-col w-60 bg-white rounded-2xl p-5 justify-between border border-slate-200/70 shadow-xs shrink-0">
+        <div className="flex flex-col gap-7">
           {/* Brand Header with real Equip 3.0 winged logo */}
-          <div className="flex items-center gap-3.5 px-1">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#064E3B] to-[#022C22] p-2 flex items-center justify-center shrink-0 shadow-md ring-1 ring-white/20">
-              <img src="/logo.png" alt="Equip 3.0" className="w-full h-full object-contain filter drop-shadow" />
+          <div className="flex items-center gap-3 px-1">
+            <div className="w-10 h-10 rounded-xl bg-[#0F472A] p-1.5 flex items-center justify-center shrink-0 shadow-xs">
+              <img src="/logo.png" alt="Equip 3.0" className="w-full h-full object-contain" />
             </div>
             <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="text-base font-extrabold text-slate-900 tracking-tight">Equip 3.0</span>
-                <span className="text-[9px] font-extrabold bg-[#A3E635]/30 text-[#0F472A] border border-[#A3E635] px-1.5 py-0.2 rounded-full uppercase tracking-wider">
-                  PRO
-                </span>
-              </div>
-              <span className="text-[11px] text-slate-400 font-medium">Programme Admin Suite</span>
+              <span className="text-base font-bold text-slate-900 tracking-tight">Equip 3.0</span>
+              <span className="text-[11px] text-slate-400 font-medium">Church Suite</span>
             </div>
           </div>
 
           {/* Navigation Links */}
           <nav className="flex flex-col gap-6">
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-1.5">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1">
                 MENU
               </span>
               <button
                 type="button"
-                className="flex items-center gap-3 px-3.5 py-2.5 bg-[#0F472A] text-white rounded-2xl font-semibold text-sm shadow-sm transition-all text-left group"
+                className="flex items-center gap-3 px-3 py-2.5 bg-[#ECFDF5] text-[#065F46] rounded-xl font-semibold text-sm transition-colors text-left"
               >
-                <LayoutDashboard className="w-4 h-4 text-[#A3E635] group-hover:scale-110 transition-transform" />
+                <LayoutDashboard className="w-4 h-4 text-[#065F46]" />
                 <span>Dashboard</span>
               </button>
 
               <button
                 type="button"
-                className="flex items-center justify-between px-3.5 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 rounded-2xl font-medium text-sm transition-colors text-left"
+                className="flex items-center justify-between px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors text-left"
               >
                 <div className="flex items-center gap-3">
                   <Users className="w-4 h-4 text-slate-400" />
@@ -310,7 +308,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
 
               <button
                 type="button"
-                className="flex items-center justify-between px-3.5 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 rounded-2xl font-medium text-sm transition-colors text-left"
+                className="flex items-center justify-between px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors text-left"
               >
                 <div className="flex items-center gap-3">
                   <Calendar className="w-4 h-4 text-slate-400" />
@@ -323,7 +321,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
 
               <button
                 type="button"
-                className="flex items-center gap-3 px-3.5 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 rounded-2xl font-medium text-sm transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors text-left"
               >
                 <Building2 className="w-4 h-4 text-slate-400" />
                 <span>Churches</span>
@@ -331,7 +329,7 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
 
               <button
                 type="button"
-                className="flex items-center gap-3 px-3.5 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 rounded-2xl font-medium text-sm transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors text-left"
               >
                 <BarChart3 className="w-4 h-4 text-slate-400" />
                 <span>Analytics</span>
@@ -339,12 +337,12 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-1.5">
-                ADMINISTRATION
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 mb-1">
+                GENERAL
               </span>
               <button
                 type="button"
-                className="flex items-center gap-3 px-3.5 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 rounded-2xl font-medium text-sm transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors text-left"
               >
                 <Settings className="w-4 h-4 text-slate-400" />
                 <span>Settings</span>
@@ -352,15 +350,15 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
 
               <button
                 type="button"
-                className="flex items-center gap-3 px-3.5 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50/80 rounded-2xl font-medium text-sm transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl font-medium text-sm transition-colors text-left"
               >
                 <HelpCircle className="w-4 h-4 text-slate-400" />
-                <span>Help Center</span>
+                <span>Help</span>
               </button>
 
               <button
                 type="button"
-                className="flex items-center gap-3 px-3.5 py-2 text-red-600 hover:bg-red-50 rounded-2xl font-medium text-sm transition-colors text-left"
+                className="flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-xl font-medium text-sm transition-colors text-left"
               >
                 <LogOut className="w-4 h-4 text-red-500" />
                 <span>Logout</span>
@@ -369,467 +367,366 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
           </nav>
         </div>
 
-        {/* Bottom Usher Desk Launch Card (High-end Emerald Surface) */}
-        <div className="bg-gradient-to-br from-[#072B19] via-[#0F472A] to-[#041D11] rounded-2xl p-4 text-white flex flex-col gap-3 shadow-lg relative overflow-hidden border border-emerald-900/60">
-          <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-[#A3E635]/10 rounded-full blur-xl pointer-events-none" />
-          <div className="flex items-center justify-between z-10">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center">
-                <QrCode className="w-4 h-4 text-[#A3E635]" />
-              </div>
-              <span className="text-xs font-bold text-white tracking-wide">Usher Terminal</span>
+        {/* Bottom Usher App Card (Matching Donezo "Download our Mobile App" aesthetic) */}
+        <div className="bg-[#0A3D24] text-white rounded-xl p-4 flex flex-col gap-3 relative overflow-hidden shadow-xs">
+          {/* Subtle Organic Wave Texture */}
+          <svg
+            className="absolute -right-3 -bottom-3 w-28 h-28 text-white/10 pointer-events-none"
+            viewBox="0 0 100 100"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <circle cx="90" cy="90" r="30" />
+            <circle cx="90" cy="90" r="50" />
+            <circle cx="90" cy="90" r="70" />
+          </svg>
+
+          <div className="flex flex-col gap-1 z-10">
+            <div className="flex items-center gap-1.5">
+              <QrCode className="w-4 h-4 text-[#A3E635]" />
+              <span className="text-xs font-bold text-white">Usher Mobile Desk</span>
             </div>
-            <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-pulse" />
+            <p className="text-[11px] text-emerald-200 leading-tight">
+              Instant door badge scanning for active sessions.
+            </p>
           </div>
-          <p className="text-[11px] text-emerald-200/90 leading-relaxed z-10">
-            Instant door badge scanning & badge accreditation desk.
-          </p>
           <button
             type="button"
-            className="w-full h-8 bg-gradient-to-r from-[#166534] to-[#15803d] hover:brightness-110 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-95 z-10"
+            className="w-full h-8 bg-[#166534] hover:bg-[#15803d] text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors z-10"
           >
             <Smartphone className="w-3.5 h-3.5" />
-            <span>Launch Scanner</span>
+            <span>Launch Desk</span>
           </button>
         </div>
       </aside>
 
       {/* 2. MAIN DASHBOARD CONTENT */}
       <main className="flex-1 flex flex-col gap-6 max-w-7xl mx-auto w-full">
-        {/* Top Header Bar */}
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between bg-white rounded-3xl px-6 py-3.5 border border-slate-100 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] gap-4">
-          {/* Search Bar with instant shortcut */}
+        {/* Top Header Bar (Donezo Search + User Pill) */}
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between bg-white rounded-2xl px-6 py-3.5 border border-slate-200/70 shadow-xs gap-4">
+          {/* Search Bar */}
           <div className="relative flex-1 max-w-md">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search participant, church, or EQ ID..."
-              className="w-full h-10 pl-10 pr-16 bg-slate-50/70 border border-slate-200/80 rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A] focus:bg-white transition-all"
+              placeholder="Search task, attendee, or EQ ID..."
+              className="w-full h-10 pl-10 pr-12 bg-slate-50/80 border border-slate-200/80 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A] transition-all"
             />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              <span className="text-[10px] font-bold text-slate-400 bg-white border border-slate-200 px-1.5 py-0.5 rounded-md shadow-2xs">
-                ⌘ K
-              </span>
-            </div>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-slate-400 bg-white border border-slate-200 px-1.5 py-0.5 rounded-md">
+              ⌘ F
+            </span>
           </div>
 
-          {/* Right Header Controls & Profile */}
+          {/* Right Header Badges */}
           <div className="flex items-center gap-4 self-end sm:self-auto">
-            {/* Live Door Sync Status */}
-            <div className="hidden md:flex items-center gap-2 bg-emerald-50 text-[#166534] border border-emerald-200/60 rounded-full px-3 py-1 text-xs font-semibold">
-              <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-              <span>3 Door Terminals Syncing</span>
-            </div>
-
-            {/* Notification Bell */}
             <button
               type="button"
-              className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 relative transition-colors shadow-2xs"
+              className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 relative transition-colors"
               aria-label="Notifications"
             >
               <Bell className="w-4 h-4" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[#84CC16] absolute top-2 right-2 ring-2 ring-white" />
+              <span className="w-2 h-2 rounded-full bg-[#84CC16] absolute top-2 right-2 ring-2 ring-white" />
             </button>
 
-            {/* Pastor Admin Identity */}
-            <div className="flex items-center gap-3 pl-2 border-l border-slate-100">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#0F472A] to-[#166534] text-[#A3E635] flex items-center justify-center text-xs font-black shadow-sm ring-2 ring-emerald-50">
+            <div className="flex items-center gap-3 pl-2 border-l border-slate-200/60">
+              <div className="w-9 h-9 rounded-full bg-[#0F472A] text-[#A3E635] flex items-center justify-center text-xs font-bold shadow-xs">
                 PA
               </div>
               <div className="hidden sm:flex flex-col text-left">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-bold text-slate-900 leading-tight">Pastor Admin</span>
-                  <Award className="w-3 h-3 text-[#0F472A]" />
-                </div>
-                <span className="text-[11px] text-slate-400 font-medium">Head of Registration</span>
+                <span className="text-xs font-bold text-slate-900 leading-tight">Pastor Admin</span>
+                <span className="text-[11px] text-slate-400">admin@equipchurch.org</span>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Dashboard Title & Quick Actions */}
+        {/* Dashboard Title & Action Buttons */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 px-1">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#0F472A] bg-lime-100/80 border border-lime-300/60 px-2.5 py-0.5 rounded-full">
-                {currentSession.day}
-              </span>
-              <span className="text-xs text-slate-400 font-medium">·</span>
-              <span className="text-xs font-semibold text-slate-500">Live Gathering Operations</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
-              Equip 3.0 Programme Dashboard
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Dashboard
             </h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Plan, prioritize, and track Equip 3.0 gathering attendance with ease.
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onRegisterClick}
-              className="h-10 px-5 bg-gradient-to-r from-[#0F472A] to-[#166534] hover:brightness-110 text-white rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-md shadow-emerald-950/10 hover:shadow-lg transition-all active:scale-[0.98]"
+              className="h-10 px-4 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-all active:scale-[0.98]"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>Register Attendee</span>
+              <span>+ Register Attendee</span>
             </button>
 
             <button
               type="button"
               onClick={handleExportCSV}
-              className="h-10 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-2xs hover:shadow-xs transition-all active:scale-[0.98]"
+              className="h-10 px-4 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200/80 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs transition-all"
             >
               <Download className="w-4 h-4 text-slate-500" />
-              <span>Export CSV</span>
+              <span>Export Roster</span>
             </button>
           </div>
         </div>
 
-        {/* Fast Door Check-in Command Bar */}
-        <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-100 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="w-10 h-10 rounded-2xl bg-lime-50 text-[#0F472A] border border-lime-200/60 flex items-center justify-center shrink-0">
-              <QrCode className="w-5 h-5 text-[#0F472A]" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-slate-900">Door Fast Check-in Desk</span>
-              <span className="text-[11px] text-slate-400">Type ID or scan participant pass to verify arrival</span>
-            </div>
-          </div>
-
-          <form onSubmit={handleFastScanSubmit} className="flex items-center gap-2 w-full md:w-auto flex-1 max-w-lg">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={fastScanId}
-                onChange={(e) => setFastScanId(e.target.value)}
-                placeholder="e.g. EQ-29402 or participant phone/name..."
-                className="w-full h-10 pl-3.5 pr-20 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A] font-mono"
-              />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-sans font-medium">
-                Press Enter ↵
-              </span>
-            </div>
-            <button
-              type="submit"
-              className="h-10 px-4 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow-sm transition-all"
-            >
-              <Check className="w-3.5 h-3.5" />
-              <span>Verify Pass</span>
-            </button>
-          </form>
-
-          {/* Feedback banner */}
-          {scanFeedback && (
-            <div
-              className={`w-full md:w-auto px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-1 ${
-                scanFeedback.type === "success"
-                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                  : "bg-amber-50 text-amber-800 border border-amber-200"
-              }`}
-            >
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
-              <span>{scanFeedback.message}</span>
-            </div>
-          )}
-        </div>
-
-        {/* 4 Stat Cards Row (Elevated with Donezo Gradients & Apple Craft) */}
+        {/* Top 4 Stat Cards (Donezo Exact Layout: 1 Hero Dark Green Card + 3 Clean White Cards) */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Primary Dark Green Hero Card (Donezo Style with Topography Glow) */}
-          <div className="bg-gradient-to-br from-[#064E3B] via-[#065F46] to-[#022C22] rounded-3xl p-5 text-white flex flex-col justify-between h-40 shadow-md shadow-emerald-950/15 relative overflow-hidden group hover:shadow-lg transition-all">
-            {/* Background SVG Wave Ribbon (Donezo Reference) */}
+          {/* Card 1: Primary Dark Green Hero Card */}
+          <div className="bg-[#0F472A] text-white rounded-2xl p-5 flex flex-col justify-between h-36 shadow-xs relative overflow-hidden group">
+            {/* Subtle Donezo Wave Glow */}
             <svg
-              className="absolute -right-6 -bottom-6 w-44 h-44 text-white/5 pointer-events-none group-hover:scale-110 transition-transform duration-700"
-              viewBox="0 0 200 200"
+              className="absolute -right-4 -bottom-4 w-32 h-32 text-white/5 pointer-events-none"
+              viewBox="0 0 100 100"
               fill="currentColor"
             >
-              <path d="M42.7,-62.9C53.8,-52.9,60.2,-38.7,66.1,-23.7C72,-8.7,77.5,7.1,73.4,20.8C69.3,34.5,55.6,46.1,41.2,55.6C26.8,65,11.8,72.3,-4.2,78C-20.2,83.7,-37.2,87.8,-49.8,80.1C-62.4,72.4,-70.6,52.8,-74.6,34C-78.7,15.2,-78.6,-2.8,-73.4,-19C-68.2,-35.1,-58,-49.4,-44.6,-58.8C-31.2,-68.2,-14.7,-72.7,0.8,-73.8C16.3,-74.9,31.6,-72.9,42.7,-62.9Z" transform="translate(100 100)" />
+              <circle cx="80" cy="80" r="40" />
             </svg>
 
             <div className="flex justify-between items-center z-10">
-              <span className="text-xs font-semibold text-[#86EFAC] tracking-wide">
-                Total Gathering Delegates
-              </span>
-              <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/15">
-                <ArrowUpRight className="w-4 h-4 text-white" />
+              <span className="text-xs font-semibold text-[#86EFAC]">Total Registrations</span>
+              <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center">
+                <ArrowUpRight className="w-3.5 h-3.5 text-white" />
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5 z-10">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight tabular-nums">
-                  184
+            <div className="flex flex-col gap-1 z-10">
+              <span className="text-3xl font-extrabold text-white tracking-tight tabular-nums">
+                184
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="bg-[#A3E635] text-[#0F472A] text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  +38
                 </span>
-                <span className="text-xs text-emerald-200 font-medium">/ 200 Max Capacity</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="bg-[#A3E635] text-[#064E3B] text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-2xs">
-                  +38 This Week
-                </span>
-                <span className="text-[11px] text-[#DCFCE7] font-medium">92% Target Reached</span>
+                <span className="text-[11px] text-[#DCFCE7]">Registered this week</span>
               </div>
             </div>
           </div>
 
-          {/* Card 2: Pastors & Ministers (Clergy Leadership) */}
-          <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] hover:shadow-md transition-all flex flex-col justify-between h-40">
+          {/* Card 2: Ordained Clergy */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-36">
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Award className="w-4 h-4 text-[#0F472A]" />
-                <span className="text-xs font-semibold text-slate-500">Pastors & Ministers</span>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
-                <ArrowUpRight className="w-4 h-4 text-slate-400" />
+              <span className="text-xs font-semibold text-slate-500">Ordained Clergy</span>
+              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
+                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
               </div>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+              <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
                 72
               </span>
-              <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
-                <span className="font-semibold text-[#0F472A]">39.1% Ordained Clergy</span>
-                <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md font-bold text-[10px]">
-                  VIP Passes
+              <div className="flex items-center gap-1.5">
+                <span className="bg-slate-100 text-slate-700 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                  39.1%
                 </span>
+                <span className="text-[11px] text-slate-400">Bishops & Pastors</span>
               </div>
             </div>
           </div>
 
-          {/* Card 3: Church Members & Workers */}
-          <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] hover:shadow-md transition-all flex flex-col justify-between h-40">
+          {/* Card 3: Church Delegations */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-36">
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-slate-500" />
-                <span className="text-xs font-semibold text-slate-500">Delegations & Workers</span>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
-                <ArrowUpRight className="w-4 h-4 text-slate-400" />
+              <span className="text-xs font-semibold text-slate-500">Members & Workers</span>
+              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
+                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
               </div>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+              <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
                 112
               </span>
-              <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
-                <span>8 Participating Churches</span>
-                <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-bold text-[10px]">
-                  General Passes
+              <div className="flex items-center gap-1.5">
+                <span className="bg-slate-100 text-slate-700 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                  8 Churches
                 </span>
+                <span className="text-[11px] text-slate-400">Host & visiting delegations</span>
               </div>
             </div>
           </div>
 
-          {/* Card 4: Live Check-in for Selected Session */}
-          <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] hover:shadow-md transition-all flex flex-col justify-between h-40">
+          {/* Card 4: Session 2 Verified */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-36">
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-emerald-600" />
-                <span className="text-xs font-semibold text-slate-500 truncate">
-                  {currentSession.short} Verified
-                </span>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
-                <ArrowUpRight className="w-4 h-4 text-slate-400" />
+              <span className="text-xs font-semibold text-slate-500">{currentSession.short} Verified</span>
+              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center">
+                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
               </div>
             </div>
             <div className="flex flex-col gap-1">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight tabular-nums">
-                  {currentSession.checkedIn}
+              <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
+                {currentSession.checkedIn}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                  {turnoutPercent}%
                 </span>
-                <span className="text-xs text-slate-400 font-medium">/ 184</span>
-              </div>
-              <div className="flex items-center justify-between text-[11px] mt-1">
-                <span className="text-emerald-700 font-bold">{turnoutPercent}% Verified Arrival</span>
-                <span className="text-amber-600 font-semibold">{totalRegistered - currentSession.checkedIn} Pending</span>
+                <span className="text-[11px] text-emerald-700 font-medium">Verified arrival</span>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Middle Section: 5 Sessions Pillar Chart & Current Hall Overview */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Pillar Chart: 5 Sessions Interactive Attendance View */}
-          <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-100 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] flex flex-col justify-between">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
-              <div>
-                <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
-                  Attendance Across 5 Programme Sessions
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Click any session pillar to inspect attendance details
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-[#0F472A] bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-xl">
-                  {currentSession.status}
-                </span>
-              </div>
+        {/* Middle Section (Donezo 3-Column: Project Analytics, Reminders, Project List) */}
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Col 1 (5 cols): Session Attendance (Donezo "Project Analytics") */}
+          <div className="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-64">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-bold text-slate-900">Session Attendance</span>
+              <span className="text-[11px] font-semibold text-[#166534] bg-emerald-50 px-2 py-0.5 rounded-md">
+                5 Sessions
+              </span>
             </div>
 
-            {/* Pillar Bars with interactive hover & active state */}
-            <div className="grid grid-cols-5 gap-3 sm:gap-4 items-end pt-8 pb-3 h-52 px-2">
+            {/* Pillar Capsules */}
+            <div className="flex items-end justify-between px-2 pt-2 h-44">
               {SESSIONS.map((s) => {
                 const isSelected = selectedSessionKey === s.key;
-                const percentage = Math.round((s.checkedIn / totalRegistered) * 100);
                 return (
                   <button
                     key={s.key}
                     type="button"
                     onClick={() => setSelectedSessionKey(s.key)}
-                    className="flex flex-col items-center gap-2 group transition-all text-center focus:outline-none"
+                    className="flex flex-col items-center gap-2 group transition-all relative focus:outline-none"
                   >
-                    <span
-                      className={`text-xs font-bold tabular-nums transition-colors ${
-                        isSelected ? "text-[#0F472A] scale-110" : "text-slate-500 group-hover:text-slate-800"
-                      }`}
-                    >
-                      {s.checkedIn}
-                    </span>
+                    {/* Floating Percentage Badge for Active Session (Donezo Style) */}
+                    {isSelected && (
+                      <div className="absolute -top-7 flex flex-col items-center animate-in fade-in zoom-in-90">
+                        <span className="text-[10px] font-extrabold bg-[#0F472A] text-white px-1.5 py-0.5 rounded shadow-xs">
+                          {s.percent}%
+                        </span>
+                        <div className="w-1.5 h-1.5 bg-[#0F472A] rotate-45 -mt-0.5" />
+                      </div>
+                    )}
 
-                    {/* Pillar Tube */}
-                    <div className="w-full max-w-[48px] h-36 bg-slate-100/80 rounded-2xl p-1 flex flex-col justify-end transition-all group-hover:bg-slate-200/60">
+                    {/* Capsule Bar */}
+                    <div className="w-10 h-32 bg-slate-100 rounded-full flex flex-col justify-end p-1 transition-all group-hover:bg-slate-200/70">
                       <div
-                        className={`w-full rounded-xl transition-all duration-500 shadow-sm ${
+                        className={`w-full rounded-full transition-all duration-300 ${
                           isSelected
-                            ? "bg-gradient-to-t from-[#064E3B] to-[#84CC16] ring-2 ring-[#0F472A]/30"
-                            : "bg-[#0F472A]/85 hover:bg-[#0F472A]"
+                            ? "bg-[#0F472A]"
+                            : s.status === "Completed"
+                            ? "bg-[#166534]/70"
+                            : "bg-[#84CC16]/60"
                         }`}
-                        style={{ height: `${percentage}%` }}
+                        style={{ height: `${s.percent}%` }}
                       />
                     </div>
 
-                    <div className="flex flex-col items-center">
-                      <span
-                        className={`text-xs font-bold transition-colors ${
-                          isSelected ? "text-[#0F472A]" : "text-slate-700"
-                        }`}
-                      >
-                        {s.short}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-medium">{percentage}%</span>
-                    </div>
+                    <span
+                      className={`text-[10px] font-semibold ${
+                        isSelected ? "text-[#0F472A] font-bold" : "text-slate-500"
+                      }`}
+                    >
+                      {s.short}
+                    </span>
                   </button>
                 );
               })}
             </div>
-
-            {/* Pillar Legend & Active Session Highlight */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-500">
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-[#0F472A] to-[#84CC16]" />
-                  <span>Selected Session</span>
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-slate-200" />
-                  <span>Capacity Gap (184 Total)</span>
-                </span>
-              </div>
-              <span className="text-slate-400 font-mono text-[11px]">Equip 3.0 Real-time Log</span>
-            </div>
           </div>
 
-          {/* Current Active Session Card & Lead Speaker Plenary */}
-          <div className="lg:col-span-5 bg-white rounded-3xl p-6 border border-slate-100 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] flex flex-col justify-between">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold text-[#0F472A] bg-lime-100/90 border border-lime-300/80 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  SESSION FOCUS
-                </span>
-                <span className="text-xs text-slate-400 font-medium">{currentSession.hall}</span>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-extrabold text-slate-900 leading-tight">
-                  {currentSession.name}
-                </h3>
-                <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{currentSession.time}</span>
-                </p>
-              </div>
-
-              {/* Minister in Charge */}
-              <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F472A] to-[#166534] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                    {currentSession.speaker.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-900">{currentSession.speaker}</span>
-                    <span className="text-[11px] text-slate-500 font-medium">Session Minister & Presider</span>
-                  </div>
-                </div>
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
-                  Confirmed
-                </span>
+          {/* Col 2 (4 cols): Current Session Focus (Donezo "Reminders") */}
+          <div className="lg:col-span-4 bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-64">
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                CURRENT SESSION
+              </span>
+              <h3 className="text-base font-bold text-slate-900 leading-snug">
+                {currentSession.name}
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">Time: {currentSession.time}</p>
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-1">
+                <Award className="w-3.5 h-3.5 text-[#0F472A]" />
+                <span className="font-semibold text-slate-800">{currentSession.speaker}</span>
+                <span className="text-slate-400">· {currentSession.hall}</span>
               </div>
             </div>
 
-            {/* Quick Live Session Usher Action */}
-            <div className="flex flex-col gap-2.5 pt-4">
-              <div className="flex items-center justify-between text-xs text-slate-600 px-1">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="font-semibold text-emerald-900">Live Hall Sync Active</span>
-                </span>
-                <span className="font-bold text-slate-900">{currentSession.checkedIn} in Sanctuary</span>
+            <div className="flex flex-col gap-2 pt-2">
+              <div className="flex items-center gap-2 bg-emerald-50 rounded-lg px-2.5 py-1.5 text-xs text-[#166534] font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Live door usher sync active</span>
               </div>
-
               <button
                 type="button"
-                className="w-full h-11 bg-gradient-to-r from-[#0F472A] to-[#166534] hover:brightness-110 text-white rounded-2xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98]"
+                className="w-full h-9 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-xs active:scale-[0.98]"
               >
                 <Play className="w-3.5 h-3.5 fill-white" />
-                <span>Open {currentSession.short} Door Check-in View</span>
+                <span>Launch Session 2 Check-in</span>
               </button>
             </div>
           </div>
+
+          {/* Col 3 (3 cols): Delegations List (Donezo "Project" List) */}
+          <div className="lg:col-span-3 bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-64">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-bold text-slate-900">Delegations</span>
+              <span className="text-[11px] font-semibold text-[#0F472A] bg-lime-100 px-2 py-0.5 rounded-md">
+                8 Churches
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-3 my-auto">
+              {DELEGATIONS.map((c) => (
+                <div key={c.name} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 truncate pr-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${c.dot} shrink-0`} />
+                    <span className="font-medium text-slate-700 truncate">{c.name}</span>
+                  </div>
+                  <span className="font-bold text-slate-900 tabular-nums shrink-0">{c.count}</span>
+                </div>
+              ))}
+            </div>
+
+            <span className="text-[11px] text-slate-400 text-center border-t border-slate-100 pt-2">
+              184 Total Expected Attendees
+            </span>
+          </div>
         </section>
 
-        {/* Bottom Section: Roster Table, Turnout Semi-circle Gauge, Session Countdown */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Recent Attendees Roster with Filter Tabs */}
-          <div className="lg:col-span-6 bg-white rounded-3xl p-6 border border-slate-100 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] flex flex-col justify-between">
-            <div className="flex flex-col gap-3 mb-3">
-              <div className="flex items-center justify-between">
+        {/* Bottom Section (Donezo 3-Column: Team Collaboration, Project Progress, Time Tracker) */}
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Col 1 (5 cols): Live Attendee Roster (Donezo "Team Collaboration") */}
+          <div className="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between h-72">
+            <div className="flex flex-col gap-2 mb-2">
+              <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
-                    Live Attendee Roster
-                  </h3>
-                  <span className="text-[11px] font-extrabold bg-[#0F472A] text-[#A3E635] px-2 py-0.5 rounded-full">
-                    {filteredAttendees.length}
+                  <span className="text-sm font-bold text-slate-900">Attendee Roster</span>
+                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                    {filteredAttendees.length} Shown
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={handleExportCSV}
-                  className="text-xs font-bold text-[#0F472A] hover:underline flex items-center gap-1"
+                  className="text-xs font-semibold text-[#166534] hover:underline"
                 >
-                  <span>Export CSV</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  Export CSV →
                 </button>
               </div>
 
-              {/* Filter Tabs */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+              {/* Roster Filter Tabs */}
+              <div className="flex items-center gap-1 text-xs">
                 {[
-                  { key: "all", label: "All (184)" },
-                  { key: "pastors", label: "Pastors (72)" },
-                  { key: "members", label: "Members (112)" },
-                  { key: "checked_in", label: "Checked In (148)" },
-                  { key: "pending", label: "Pending (36)" },
+                  { key: "all", label: "All" },
+                  { key: "pastors", label: "Pastors" },
+                  { key: "members", label: "Members" },
+                  { key: "checked_in", label: "Checked In" },
                 ].map((tab) => (
                   <button
                     key={tab.key}
                     type="button"
                     onClick={() => setActiveFilterTab(tab.key as any)}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition-all text-xs shrink-0 ${
+                    className={`px-2 py-0.5 rounded-md font-semibold text-[11px] transition-colors ${
                       activeFilterTab === tab.key
-                        ? "bg-[#0F472A] text-white shadow-xs"
-                        : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                        ? "bg-[#0F472A] text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200/60"
                     }`}
                   >
                     {tab.label}
@@ -838,58 +735,44 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
               </div>
             </div>
 
-            {/* Attendee List Cards */}
-            <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[300px] pr-1">
-              {filteredAttendees.slice(0, 5).map((a) => (
+            {/* List Rows */}
+            <div className="flex flex-col gap-2 overflow-y-auto max-h-48 pr-1">
+              {filteredAttendees.slice(0, 4).map((a) => (
                 <div
                   key={a.id}
-                  className="flex items-center justify-between p-3 bg-slate-50/60 hover:bg-slate-50 rounded-2xl border border-slate-100 transition-all hover:border-slate-200"
+                  className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-xl transition-colors border border-transparent hover:border-slate-100"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     <div
-                      className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
                         a.isOrdained
-                          ? "bg-purple-100 text-purple-900 border border-purple-200"
-                          : "bg-emerald-100 text-emerald-900 border border-emerald-200"
+                          ? "bg-purple-100 text-purple-900"
+                          : "bg-emerald-100 text-emerald-900"
                       }`}
                     >
                       {a.fullName.slice(0, 2).toUpperCase()}
                     </div>
-
                     <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
-                          {a.fullName}
-                        </span>
-                        {a.isOrdained && (
-                          <span className="text-[9px] font-extrabold bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded uppercase">
-                            Clergy
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[11px] text-slate-500 mt-0.5 truncate max-w-[200px] sm:max-w-xs">
+                      <span className="text-xs font-bold text-slate-900 leading-tight">
+                        {a.fullName}
+                      </span>
+                      <span className="text-[11px] text-slate-500">
                         {a.roleOffice} · {a.churchName}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="hidden sm:flex flex-col items-end">
-                      <span className="font-mono text-xs font-bold text-[#0F472A] bg-lime-100/90 border border-lime-300/60 px-2 py-0.5 rounded-lg">
-                        {a.id}
-                      </span>
-                      {a.checkedInAt && (
-                        <span className="text-[10px] text-slate-400 mt-0.5">At {a.checkedInAt}</span>
-                      )}
-                    </div>
-
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-[#0F472A] bg-lime-100 px-2 py-0.5 rounded-md">
+                      {a.id}
+                    </span>
                     <button
                       type="button"
                       onClick={() => toggleCheckIn(a.id)}
-                      className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all shadow-2xs ${
+                      className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-all ${
                         a.checkedIn
-                          ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300/60"
-                          : "bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300/60"
+                          ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                          : "bg-amber-100 text-amber-800 hover:bg-amber-200"
                       }`}
                     >
                       {a.checkedIn ? "Checked In" : "Check In"}
@@ -900,18 +783,16 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
             </div>
           </div>
 
-          {/* Turnout Donut / Semi-Circle Completion Gauge (Donezo Reference) */}
-          <div className="lg:col-span-3 bg-white rounded-3xl p-6 border border-slate-100 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] flex flex-col justify-between items-center text-center">
-            <div className="w-full flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-900">Turnout Completion</span>
-              <span className="text-[11px] font-bold text-[#0F472A] bg-lime-100 px-2 py-0.5 rounded-full">
-                {currentSession.short}
-              </span>
+          {/* Col 2 (3 cols): Turnout Progress Gauge (Donezo "Project Progress") */}
+          <div className="lg:col-span-3 bg-white rounded-2xl p-5 border border-slate-200/70 shadow-xs flex flex-col justify-between items-center text-center h-72">
+            <div className="w-full text-left">
+              <span className="text-sm font-bold text-slate-900">Project Progress</span>
             </div>
 
-            {/* Semi-Circular SVG Gauge */}
-            <div className="flex flex-col items-center justify-center my-auto py-2">
-              <svg width="170" height="95" viewBox="0 0 180 95" className="overflow-visible">
+            {/* Half-Circle SVG Gauge (Donezo Green Arc) */}
+            <div className="flex flex-col items-center justify-center my-auto">
+              <svg width="160" height="85" viewBox="0 0 180 95" className="overflow-visible">
+                {/* Track */}
                 <path
                   d="M 15 90 A 75 75 0 0 1 165 90"
                   fill="none"
@@ -919,97 +800,75 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
                   strokeWidth="16"
                   strokeLinecap="round"
                 />
+                {/* Donezo Dark Green Progress */}
                 <path
-                  d="M 15 90 A 75 75 0 0 1 150 45"
+                  d="M 15 90 A 75 75 0 0 1 155 52"
                   fill="none"
-                  stroke="url(#gauge-emerald-lime)"
+                  stroke="#0F472A"
                   strokeWidth="16"
                   strokeLinecap="round"
                 />
-                <defs>
-                  <linearGradient id="gauge-emerald-lime" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#0F472A" />
-                    <stop offset="100%" stopColor="#84CC16" />
-                  </linearGradient>
-                </defs>
               </svg>
-
-              <div className="flex flex-col items-center -mt-3">
-                <span className="text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums">
-                  {turnoutPercent}%
-                </span>
-                <span className="text-[11px] text-slate-500 font-semibold mt-0.5">
-                  {currentSession.checkedIn} of {totalRegistered} Verified
-                </span>
-              </div>
+              <span className="text-3xl font-extrabold text-slate-900 -mt-2 tracking-tight tabular-nums">
+                {turnoutPercent}%
+              </span>
+              <span className="text-[11px] text-slate-500 font-medium">Session Progress</span>
             </div>
 
-            {/* Gauge Legend */}
-            <div className="flex items-center gap-4 text-xs font-semibold text-slate-600">
+            {/* Legend */}
+            <div className="flex items-center gap-4 text-xs text-slate-600">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#0F472A]" />
-                <span>Verified ({currentSession.checkedIn})</span>
+                <span>Completed</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                <span>Pending ({totalRegistered - currentSession.checkedIn})</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-300" />
+                <span>Pending</span>
               </div>
             </div>
           </div>
 
-          {/* Session Countdown Timer (Donezo Reference Wave Card) */}
-          <div className="lg:col-span-3 bg-gradient-to-br from-[#06381E] via-[#0B2E1A] to-[#041D11] rounded-3xl p-6 text-white flex flex-col justify-between shadow-md shadow-emerald-950/20 relative overflow-hidden border border-emerald-900/60">
-            {/* 3D Wave Topology Background like Donezo Time Tracker */}
+          {/* Col 3 (4 cols): Time Tracker with 3D Wave Pattern (Donezo "Time Tracker") */}
+          <div className="lg:col-span-4 bg-[#0D3821] text-white rounded-2xl p-5 flex flex-col justify-between h-72 shadow-xs relative overflow-hidden border border-emerald-900/40">
+            {/* Donezo Exact 3D Wave Fluid Ribbons */}
             <svg
-              className="absolute inset-0 w-full h-full text-[#A3E635]/10 pointer-events-none"
+              className="absolute inset-0 w-full h-full text-[#A3E635]/15 pointer-events-none"
               viewBox="0 0 300 300"
               fill="none"
               stroke="currentColor"
-              strokeWidth="1.5"
+              strokeWidth="2"
             >
-              <path d="M -50,150 Q 75,50 150,150 T 350,150" />
-              <path d="M -50,180 Q 75,80 150,180 T 350,180" />
-              <path d="M -50,210 Q 75,110 150,210 T 350,210" />
-              <path d="M -50,240 Q 75,140 150,240 T 350,240" />
-              <path d="M -50,270 Q 75,170 150,270 T 350,270" />
+              <path d="M -40,160 Q 60,60 160,160 T 360,160" />
+              <path d="M -40,190 Q 60,90 160,190 T 360,190" />
+              <path d="M -40,220 Q 60,120 160,220 T 360,220" />
+              <path d="M -40,250 Q 60,150 160,250 T 360,250" />
             </svg>
 
             <div className="flex justify-between items-center z-10">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-pulse" />
-                <span className="text-xs font-extrabold text-[#A3E635] tracking-widest uppercase">
-                  ACTIVE SESSION
-                </span>
-              </div>
-              <span className="text-[10px] font-bold bg-white/10 text-emerald-200 border border-white/15 px-2 py-0.5 rounded-full">
-                HALL LIVE
-              </span>
+              <span className="text-xs font-semibold text-emerald-300">Time Tracker</span>
+              <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-pulse" />
             </div>
 
             <div className="flex flex-col items-center justify-center my-auto gap-1 z-10">
-              <span className="text-[10px] text-emerald-300/80 font-bold tracking-widest uppercase">
-                ESTIMATED CONCLUDING IN
-              </span>
               <span className="font-mono text-3xl sm:text-4xl font-extrabold text-white tracking-widest tabular-nums filter drop-shadow">
                 {formatTimer(secondsRemaining)}
               </span>
-              <span className="text-[11px] text-emerald-200 font-medium">Main Sanctuary Overflow Open</span>
+              <span className="text-[11px] text-emerald-200">Main Auditorium Live</span>
             </div>
 
             <div className="flex items-center justify-center gap-3 z-10">
               <button
                 type="button"
                 onClick={() => setIsTimerRunning(!isTimerRunning)}
-                className="w-10 h-10 rounded-2xl bg-gradient-to-r from-[#166534] to-[#15803d] hover:brightness-110 flex items-center justify-center text-white transition-all shadow-md active:scale-95"
-                aria-label={isTimerRunning ? "Pause session timer" : "Resume session timer"}
+                className="w-10 h-10 rounded-full bg-white text-[#0D3821] hover:bg-emerald-50 flex items-center justify-center transition-all shadow-md active:scale-95"
+                aria-label={isTimerRunning ? "Pause timer" : "Resume timer"}
               >
-                {isTimerRunning ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white" />}
+                {isTimerRunning ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
               </button>
-
               <button
                 type="button"
-                onClick={() => setSecondsRemaining(10800)}
-                className="w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-white transition-all active:scale-95"
+                onClick={() => setSecondsRemaining(9910)}
+                className="w-10 h-10 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-all shadow-md active:scale-95"
                 aria-label="Reset timer"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -1018,56 +877,47 @@ export default function Dashboard({ onRegisterClick }: { onRegisterClick?: () =>
           </div>
         </section>
 
-        {/* Church Delegations Leaderboard */}
-        <section className="bg-white rounded-3xl p-6 border border-slate-100 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.03)] flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
-                Participating Church Delegations
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Attendance quota & minister presence breakdown across host & visiting congregations
-              </p>
+        {/* Door Fast Check-in Command Bar at Bottom */}
+        <section className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#0F472A] flex items-center justify-center shrink-0">
+              <QrCode className="w-5 h-5 text-[#0F472A]" />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#0F472A] bg-lime-100 border border-lime-300/60 px-3 py-1 rounded-full">
-                8 Partner Ministries
-              </span>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-slate-900">Door Fast Check-in Desk</span>
+              <span className="text-[11px] text-slate-400">Type participant ID (e.g. EQ-29402) or phone to verify pass</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-            {DELEGATIONS.map((del) => (
-              <div
-                key={del.name}
-                className="bg-slate-50/70 hover:bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col justify-between gap-3 transition-all hover:shadow-xs"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 truncate pr-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${del.color} shrink-0`} />
-                    <span className="text-xs font-bold text-slate-800 truncate">{del.name}</span>
-                  </div>
-                  <span className="text-xs font-extrabold text-slate-900 tabular-nums shrink-0">
-                    {del.count} delegates
-                  </span>
-                </div>
+          <form onSubmit={handleFastScanSubmit} className="flex items-center gap-2 w-full sm:w-auto flex-1 max-w-md">
+            <input
+              type="text"
+              value={fastScanId}
+              onChange={(e) => setFastScanId(e.target.value)}
+              placeholder="e.g. EQ-29402 or phone..."
+              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+            />
+            <button
+              type="submit"
+              className="h-9 px-4 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors shadow-xs"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Verify</span>
+            </button>
+          </form>
 
-                {/* Progress Bar */}
-                <div className="flex flex-col gap-1.5">
-                  <div className="w-full h-2 bg-slate-200/80 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${del.color} rounded-full transition-all duration-500`}
-                      style={{ width: `${del.percent}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                    <span>{del.pastors} Ordained Ministers</span>
-                    <span className="font-bold text-slate-700">{del.percent}% Checked In</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {scanFeedback && (
+            <div
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in ${
+                scanFeedback.type === "success"
+                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                  : "bg-amber-50 text-amber-800 border border-amber-200"
+              }`}
+            >
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{scanFeedback.message}</span>
+            </div>
+          )}
         </section>
       </main>
     </div>
