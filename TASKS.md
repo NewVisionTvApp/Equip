@@ -9,10 +9,10 @@
 - [x] TASK-006: Scaffold project dependencies (`package.json`, TypeScript, Tailwind CSS, Drizzle ORM, Better Auth, Wrangler config).
 
 ## Phase 2: Core Data Layer & Relational Schemas
-- [ ] TASK-007: Define Drizzle schema for Better Auth tables (`user`, `session`, `account`, `verification`) and domain tables (`participants`, `events`, `registrations`, `session_attendance`).
-- [ ] TASK-008: Configure Better Auth client and server handlers with Cloudflare D1 and Drizzle adapter.
-- [ ] TASK-009: Implement Unique Participant ID generator (e.g. `EQ-XXXXX` with collision detection).
-- [ ] TASK-010: Create synthetic seed data script with 10 realistic sample participants (pastors and members).
+- [x] TASK-007: Define Drizzle schema for Better Auth tables (`user`, `session`, `account`, `verification`) and domain tables (`participants`, `events`, `registrations`, `session_attendance`).
+- [x] TASK-008: Configure Better Auth client and server handlers with Cloudflare D1 and Drizzle adapter.
+- [x] TASK-009: Implement Unique Participant ID generator (e.g. `EQ-XXXXX` with collision detection).
+- [x] TASK-010: Create synthetic seed data script with 10 realistic sample participants (pastors and members).
 
 ## Phase 3: Public Registration & Authentication Flow (Vertical Slice 1)
 - [ ] TASK-011: Build Email Sign-Up & Sign-In UI with Better Auth (responsive forms, error states).
