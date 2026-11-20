@@ -2,7 +2,7 @@ import { SEED_PARTICIPANTS } from "@/db/seed-data";
 import { generateParticipantId } from "./id-generator";
 
 export interface SessionConfig {
-  key: "mon_am" | "mon_pm" | "tue_am" | "tue_pm" | "wed_pm";
+  key: "mon_am" | "mon_pm" | "tue_am" | "tue_pm" | "wed_am";
   name: string; // e.g. "Keynote Impartation & Vision Casting"
   short: string; // e.g. "Mon AM"
   day: string; // e.g. "Day 1 · Morning"
@@ -51,14 +51,14 @@ export interface AttendeeViewRecord extends StoredParticipant {
     mon_pm: boolean;
     tue_am: boolean;
     tue_pm: boolean;
-    wed_pm: boolean;
+    wed_am: boolean;
   };
   sessionTimes: {
     mon_am: string | null;
     mon_pm: string | null;
     tue_am: string | null;
     tue_pm: string | null;
-    wed_pm: string | null;
+    wed_am: string | null;
   };
 }
 
@@ -116,11 +116,11 @@ export function createDefaultSessions(): SessionConfig[] {
       capacity: 200,
     },
     {
-      key: "wed_pm",
+      key: "wed_am",
       name: "Day 3 Grand Finale: Final Commissioning",
-      short: "Wed PM",
-      day: "Day 3 · Grand Finale",
-      time: "05:00 PM – 08:30 PM",
+      short: "Wed AM",
+      day: "Day 3 · Morning",
+      time: "09:00 AM – 01:00 PM",
       speaker: "Apostolic Council (TBA)",
       hall: "Main Auditorium",
       capacity: 200,
@@ -180,11 +180,11 @@ function getInitialState(): PlatformState {
           capacity: 200,
         },
         {
-          key: "wed_pm",
+          key: "wed_am",
           name: "Final Mantle Impartation & Commissioning",
-          short: "Wed PM",
-          day: "Day 3 · Grand Finale",
-          time: "05:00 PM – 08:30 PM",
+          short: "Wed AM",
+          day: "Day 3 · Morning",
+          time: "09:00 AM – 01:00 PM",
           speaker: "Presiding Council",
           hall: "Main Auditorium",
           capacity: 200,
@@ -248,7 +248,7 @@ function getInitialState(): PlatformState {
     });
 
     // Populate initial attendance for demo
-    const sessionKeys = ["mon_am", "mon_pm", "tue_am", "tue_pm", "wed_pm"];
+    const sessionKeys = ["mon_am", "mon_pm", "tue_am", "tue_pm", "wed_am"];
     sessionKeys.forEach((sKey) => {
       let attended = false;
       let timestamp: string | null = null;
@@ -265,9 +265,9 @@ function getInitialState(): PlatformState {
       } else if (sKey === "tue_pm" && idx < 170) {
         attended = true;
         timestamp = `05:${String(20 + (idx % 30)).padStart(2, "0")} PM`;
-      } else if (sKey === "wed_pm" && idx < 178) {
+      } else if (sKey === "wed_am" && idx < 178) {
         attended = true;
-        timestamp = `05:${String(10 + (idx % 40)).padStart(2, "0")} PM`;
+        timestamp = `08:${String(35 + (idx % 25)).padStart(2, "0")} AM`;
       }
 
       attendance[`${p.id}_2026-12-EQUIP_${sKey}`] = {
@@ -351,7 +351,7 @@ export function getAttendeesForEvent(
         mon_pm: state.attendance[`${p.id}_${eventId}_mon_pm`]?.attended ?? false,
         tue_am: state.attendance[`${p.id}_${eventId}_tue_am`]?.attended ?? false,
         tue_pm: state.attendance[`${p.id}_${eventId}_tue_pm`]?.attended ?? false,
-        wed_pm: state.attendance[`${p.id}_${eventId}_wed_pm`]?.attended ?? false,
+        wed_am: state.attendance[`${p.id}_${eventId}_wed_am`]?.attended ?? false,
       };
 
       const sessionTimes = {
@@ -359,7 +359,7 @@ export function getAttendeesForEvent(
         mon_pm: state.attendance[`${p.id}_${eventId}_mon_pm`]?.timestamp ?? null,
         tue_am: state.attendance[`${p.id}_${eventId}_tue_am`]?.timestamp ?? null,
         tue_pm: state.attendance[`${p.id}_${eventId}_tue_pm`]?.timestamp ?? null,
-        wed_pm: state.attendance[`${p.id}_${eventId}_wed_pm`]?.timestamp ?? null,
+        wed_am: state.attendance[`${p.id}_${eventId}_wed_am`]?.timestamp ?? null,
       };
 
       return {

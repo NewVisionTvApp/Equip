@@ -163,7 +163,7 @@ CREATE TABLE registrations (
 CREATE TABLE session_attendance (
   id TEXT PRIMARY KEY,
   registration_id TEXT NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
-  session_key TEXT NOT NULL,         -- 'mon_am', 'mon_pm', 'tue_am', 'tue_pm', 'wed_pm'
+  session_key TEXT NOT NULL,         -- 'mon_am', 'mon_pm', 'tue_am', 'tue_pm', 'wed_am'
   checked_in_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   checked_in_by TEXT,                -- Admin identifier
   UNIQUE(registration_id, session_key)

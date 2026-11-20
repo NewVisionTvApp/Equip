@@ -30,7 +30,7 @@ This test plan defines verification criteria for the Equip Registration & Attend
   - *Expected:* Record saved to `session_attendance`, status toggles to "Checked In" with timestamp.
 - **TC-09:** Admin toggles attendance off (undo check-in).
   - *Expected:* Attendance record cleanly removed or updated.
-- **TC-10:** Verify attendance across all 5 sessions independently (Mon AM, Mon PM, Tue AM, Tue PM, Wed PM).
+- **TC-10:** Verify attendance across all 5 sessions independently (Mon AM, Mon PM, Tue AM, Tue PM, Wed AM).
 
 ### E. Responsive & Viewport Checks
 - **TC-11:** Test on mobile viewport (375px - iPhone SE).

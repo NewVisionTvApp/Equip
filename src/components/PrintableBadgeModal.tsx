@@ -126,7 +126,7 @@ export default function PrintableBadgeModal({
                 <div className="text-slate-300 mt-0.5">[ &nbsp; ]</div>
               </div>
               <div className="border border-slate-300 rounded p-1 text-center bg-white">
-                <div>Wed PM</div>
+                <div>Wed AM</div>
                 <div className="text-slate-300 mt-0.5">[ &nbsp; ]</div>
               </div>
             </div>

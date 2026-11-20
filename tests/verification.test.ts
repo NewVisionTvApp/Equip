@@ -261,7 +261,7 @@ describe("Equip 3.0 Verification Test Suite (Phase 5)", () => {
      3. 5-Session Attendance Tracker Tests (TC-08 to TC-10)
      ========================================================================= */
   describe("5-Session Attendance Tracker (TC-08 to TC-10)", () => {
-    const VALID_SESSIONS = ["mon_am", "mon_pm", "tue_am", "tue_pm", "wed_pm"];
+    const VALID_SESSIONS = ["mon_am", "mon_pm", "tue_am", "tue_pm", "wed_am"];
 
     interface SessionAttendanceState {
       [participantId: string]: {
@@ -314,17 +314,17 @@ describe("Equip 3.0 Verification Test Suite (Phase 5)", () => {
     test("TC-10: All 5 sessions operate independently per participant", () => {
       const participantId = "EQ-7M2DX";
 
-      // Check in Mon AM, Tue PM, Wed PM
+      // Check in Mon AM, Tue PM, Wed AM
       toggleAttendance(participantId, "mon_am");
       toggleAttendance(participantId, "tue_pm");
-      toggleAttendance(participantId, "wed_pm");
+      toggleAttendance(participantId, "wed_am");
 
       const pSessions = attendanceState[participantId];
       assert.strictEqual(pSessions["mon_am"].checkedIn, true);
       assert.strictEqual(pSessions["mon_pm"]?.checkedIn ?? false, false);
       assert.strictEqual(pSessions["tue_am"]?.checkedIn ?? false, false);
       assert.strictEqual(pSessions["tue_pm"].checkedIn, true);
-      assert.strictEqual(pSessions["wed_pm"].checkedIn, true);
+      assert.strictEqual(pSessions["wed_am"].checkedIn, true);
     });
   });
 

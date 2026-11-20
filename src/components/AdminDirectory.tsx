@@ -57,14 +57,14 @@ export default function AdminDirectory({
           mon_pm: idx < 9,
           tue_am: idx < 7,
           tue_pm: idx < 6,
-          wed_pm: idx < 9,
+          wed_am: idx < 9,
         },
         sessionTimes: {
           mon_am: idx < 8 ? `08:${35 + idx * 2} AM` : null,
           mon_pm: idx < 9 ? `05:${20 + idx * 3} PM` : null,
           tue_am: idx < 7 ? `08:${45 + idx * 2} AM` : null,
           tue_pm: idx < 6 ? `05:${30 + idx * 3} PM` : null,
-          wed_pm: idx < 9 ? `05:${10 + idx * 2} PM` : null,
+          wed_am: idx < 9 ? `08:${50 + idx * 2} AM` : null,
         },
       };
     })
@@ -177,7 +177,7 @@ export default function AdminDirectory({
       "Mon PM Checked In",
       "Tue AM Checked In",
       "Tue PM Checked In",
-      "Wed PM Checked In",
+      "Wed AM Checked In",
     ];
 
     const rows = filteredData.map((p) => [
@@ -193,7 +193,7 @@ export default function AdminDirectory({
       p.sessions.mon_pm ? "Yes" : "No",
       p.sessions.tue_am ? "Yes" : "No",
       p.sessions.tue_pm ? "Yes" : "No",
-      p.sessions.wed_pm ? "Yes" : "No",
+      p.sessions.wed_am ? "Yes" : "No",
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
@@ -384,7 +384,7 @@ export default function AdminDirectory({
                     {/* Session Pills Progress */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-1">
-                        {["mon_am", "mon_pm", "tue_am", "tue_pm", "wed_pm"].map((sKey) => {
+                        {["mon_am", "mon_pm", "tue_am", "tue_pm", "wed_am"].map((sKey) => {
                           const isAttended = (p.sessions as any)[sKey];
                           return (
                             <span
@@ -513,7 +513,7 @@ export default function AdminDirectory({
                       { key: "mon_pm", name: "Session 2: Monday Evening" },
                       { key: "tue_am", name: "Session 3: Tuesday Morning" },
                       { key: "tue_pm", name: "Session 4: Tuesday Evening" },
-                      { key: "wed_pm", name: "Session 5: Wednesday PM" },
+                      { key: "wed_am", name: "Session 5: Wednesday Morning" },
                     ]
                 ).map((s) => {
                   const isChecked = (selectedParticipant.sessions as any)[s.key];

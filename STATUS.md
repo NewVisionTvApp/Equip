@@ -10,6 +10,7 @@
 - **Phase 4: Admin Directory & Multi-Session Attendance**:
   - Full-screen Admin Directory ([src/components/AdminDirectory.tsx](file:///c:/Users/DELL/Equip/src/components/AdminDirectory.tsx)) with multi-field search, role filters, profile drawer, and CSV matrix export.
   - Multi-Session Attendance Desk ([src/components/MultiSessionAttendance.tsx](file:///c:/Users/DELL/Equip/src/components/MultiSessionAttendance.tsx)) for church ushers with live door fast-scanner and 5-session attendance matrix.
+  - **Schedule Calibration**: Calibrated the 5 sessions strictly to Mon AM, Mon PM, Tue AM, Tue PM, and **Wed AM** (Day 3 is morning-only: 09:00 AM – 01:00 PM; no evening session). Updated schema, store, UI tables, CSV headers, physical printable badge slips, and automated tests.
 - **Phase 5: Verification & Quality Assurance**:
   - Built automated test suite in [tests/verification.test.ts](file:///c:/Users/DELL/Equip/tests/verification.test.ts) covering ID generation, 10,000 collision-avoidance check, duplicate prevention, returning attendee renewal, and 5-session attendance tracking.
   - Ran `pnpm test`: **13 tests passed, 0 failures** in 238ms.

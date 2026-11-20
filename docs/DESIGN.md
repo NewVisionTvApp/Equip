@@ -61,5 +61,5 @@ The color system directly reflects the official **Equip 3.0** logo emblem:
 
 ### Admin Dashboard Elements
 - **Search Header:** Persistent search bar with live filtering by name, phone, or ID.
-- **Attendance Session Switcher:** Tabbed or button-group selector for the 5 sessions (Mon AM, Mon PM, Tue AM, Tue PM, Wed PM).
+- **Attendance Session Switcher:** Tabbed or button-group selector for the 5 sessions (Mon AM, Mon PM, Tue AM, Tue PM, Wed AM).
 - **Roster Table / Cards:** Table view on desktop, clean touch cards on mobile with single-tap check-in buttons (`Check In` / `Checked In`).

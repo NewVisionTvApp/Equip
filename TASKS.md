@@ -22,7 +22,7 @@
 
 ## Phase 4: Admin Directory & Attendance Tracking (Vertical Slice 2)
 - [x] TASK-014: Build Admin Directory UI with search by Name, Phone, and Unique ID.
-- [x] TASK-015: Build Multi-Session Attendance UI (5 sessions: Mon AM/PM, Tue AM/PM, Wed PM) with single-tap toggle.
+- [x] TASK-015: Build Multi-Session Attendance UI (5 sessions: Mon AM/PM, Tue AM/PM, Wed AM) with single-tap toggle.
 - [x] TASK-016: Add CSV export feature for event rosters and attendance reports.
 
 ## Phase 5: Verification & Quality Assurance

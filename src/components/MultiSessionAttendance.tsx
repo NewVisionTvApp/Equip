@@ -69,11 +69,11 @@ const SESSIONS_DATA = [
     capacity: 200,
   },
   {
-    key: "wed_pm",
+    key: "wed_am",
     name: "Final Mantle Impartation & Commissioning",
-    short: "Wed PM",
-    day: "Day 3 · Grand Finale",
-    time: "05:00 PM – 08:30 PM",
+    short: "Wed AM",
+    day: "Day 3 · Morning",
+    time: "09:00 AM – 01:00 PM",
     speaker: "Presiding Apostolic Council",
     hall: "Main Auditorium",
     capacity: 200,
@@ -115,14 +115,14 @@ export default function MultiSessionAttendance({
           mon_pm: idx < 9,
           tue_am: idx < 7,
           tue_pm: idx < 6,
-          wed_pm: idx < 9,
+          wed_am: idx < 9,
         },
         timestamps: {
           mon_am: idx < 8 ? `08:${40 + idx * 2} AM` : null,
           mon_pm: idx < 9 ? `05:${25 + idx * 3} PM` : null,
           tue_am: idx < 7 ? `08:${50 + idx * 2} AM` : null,
           tue_pm: idx < 6 ? `05:${35 + idx * 3} PM` : null,
-          wed_pm: idx < 9 ? `05:${15 + idx * 2} PM` : null,
+          wed_am: idx < 9 ? `08:${50 + idx * 2} AM` : null,
         },
       };
     })
@@ -502,7 +502,7 @@ export default function MultiSessionAttendance({
                 <th className="py-3 px-4 text-center">Mon PM</th>
                 <th className="py-3 px-4 text-center">Tue AM</th>
                 <th className="py-3 px-4 text-center">Tue PM</th>
-                <th className="py-3 px-4 text-center">Wed PM</th>
+                <th className="py-3 px-4 text-center">Wed AM</th>
                 <th className="py-3 px-4 text-right">Badge</th>
               </tr>
             </thead>
@@ -545,7 +545,7 @@ export default function MultiSessionAttendance({
                     </td>
 
                     {/* 5 Sessions Toggles */}
-                    {["mon_am", "mon_pm", "tue_am", "tue_pm", "wed_pm"].map((sKey) => {
+                    {["mon_am", "mon_pm", "tue_am", "tue_pm", "wed_am"].map((sKey) => {
                       const isAttended = (p.attendance as any)?.[sKey];
                       const isCurrentSessionColumn = activeSessionKey === sKey;
 

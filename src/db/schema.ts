@@ -117,7 +117,7 @@ export const registrations = sqliteTable(
  * - 'mon_pm': Day 1 Evening
  * - 'tue_am': Day 2 Morning
  * - 'tue_pm': Day 2 Evening
- * - 'wed_pm': Day 3 Afternoon
+ * - 'wed_am': Day 3 Morning (Grand Finale)
  */
 export const sessionAttendance = sqliteTable(
   "session_attendance",
@@ -126,7 +126,7 @@ export const sessionAttendance = sqliteTable(
     registrationId: text("registration_id")
       .notNull()
       .references(() => registrations.id, { onDelete: "cascade" }),
-    sessionKey: text("session_key").notNull(), // 'mon_am' | 'mon_pm' | 'tue_am' | 'tue_pm' | 'wed_pm'
+    sessionKey: text("session_key").notNull(), // 'mon_am' | 'mon_pm' | 'tue_am' | 'tue_pm' | 'wed_am'
     checkedInAt: integer("checked_in_at", { mode: "timestamp" }).notNull().default(sql`(CURRENT_TIMESTAMP)`),
     checkedInBy: text("checked_in_by"), // Admin user ID / name
   },
