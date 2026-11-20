@@ -16,11 +16,12 @@ export interface SyntheticParticipantSeed {
 }
 
 export const SEED_CURRENT_EVENT = {
-  id: "2026-12-EQUIP",
-  title: "Equip December 2026: Leadership & Ministry Alignment",
-  startDate: "2026-12-07",
-  endDate: "2026-12-09",
-  status: "open",
+  id: "2026-11-EQUIP",
+  title: "Equip November 2026: Apostolic Mantles & Spiritual Leadership",
+  monthYear: "November 2026",
+  startDate: "2026-11-23",
+  endDate: "2026-11-25",
+  status: "active",
 };
 
 export const SEED_PARTICIPANTS: SyntheticParticipantSeed[] = [

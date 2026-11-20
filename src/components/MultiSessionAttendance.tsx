@@ -84,7 +84,7 @@ export default function MultiSessionAttendance({
   onBackToDashboard,
   onOpenDirectory,
   onOpenRegister,
-  activeEventName = "Equip December 2026",
+  activeEventName = "Equip November 2026",
   rosterData,
   sessionsData,
   onToggleAttendance,

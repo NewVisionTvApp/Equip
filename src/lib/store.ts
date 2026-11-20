@@ -1,4 +1,4 @@
-import { SEED_PARTICIPANTS } from "@/db/seed-data";
+import { SEED_PARTICIPANTS } from "../db/seed-data";
 import { generateParticipantId } from "./id-generator";
 
 export interface SessionConfig {
@@ -131,12 +131,12 @@ export function createDefaultSessions(): SessionConfig[] {
 function getInitialState(): PlatformState {
   const initialEvents: EquipEvent[] = [
     {
-      id: "2026-12-EQUIP",
-      title: "Equip December 2026: Apostolic Mantles & Spiritual Leadership",
+      id: "2026-11-EQUIP",
+      title: "Equip November 2026: Apostolic Mantles & Spiritual Leadership",
       theme: "Apostolic Mantles & Spiritual Leadership",
-      monthYear: "December 2026",
-      startDate: "2026-12-14",
-      endDate: "2026-12-16",
+      monthYear: "November 2026",
+      startDate: "2026-11-23",
+      endDate: "2026-11-25",
       status: "active",
       sessions: [
         {
@@ -192,22 +192,22 @@ function getInitialState(): PlatformState {
       ],
     },
     {
-      id: "2027-01-EQUIP",
-      title: "Equip January 2027: Apostolic Foundation & Ministerial Alignment",
-      theme: "Apostolic Foundation & Ministerial Alignment",
-      monthYear: "January 2027",
-      startDate: "2027-01-11",
-      endDate: "2027-01-13",
+      id: "2026-12-EQUIP",
+      title: "Equip December 2026: End-of-Year Anointing & Divine Alignment",
+      theme: "End-of-Year Anointing & Divine Alignment",
+      monthYear: "December 2026",
+      startDate: "2026-12-14",
+      endDate: "2026-12-16",
       status: "open",
       sessions: createDefaultSessions(),
     },
     {
-      id: "2027-02-EQUIP",
-      title: "Equip February 2027: Evangelical Fire & Church Growth",
-      theme: "Evangelical Fire & Church Growth",
-      monthYear: "February 2027",
-      startDate: "2027-02-08",
-      endDate: "2027-02-10",
+      id: "2027-01-EQUIP",
+      title: "Equip January 2027: Apostolic Foundation & New Horizons",
+      theme: "Apostolic Foundation & New Horizons",
+      monthYear: "January 2027",
+      startDate: "2027-01-11",
+      endDate: "2027-01-13",
       status: "draft",
       sessions: createDefaultSessions(),
     },
@@ -217,7 +217,7 @@ function getInitialState(): PlatformState {
   const registrations: StoredRegistration[] = [];
   const attendance: Record<string, { attended: boolean; timestamp: string | null }> = {};
 
-  // Populate December registrations from SEED_PARTICIPANTS
+  // Populate November registrations from SEED_PARTICIPANTS
   SEED_PARTICIPANTS.forEach((p, idx) => {
     const isOrdained =
       p.roleOffice.toLowerCase().includes("pastor") ||
@@ -236,15 +236,15 @@ function getInitialState(): PlatformState {
       roleOffice: p.roleOffice,
       isOrdained,
       location: p.location,
-      createdAt: "2026-12-01T08:00:00Z",
+      createdAt: "2026-11-10T08:00:00Z",
     };
 
-    const regId = `reg_202612_${p.id}`;
+    const regId = `reg_202611_${p.id}`;
     registrations.push({
       id: regId,
       participantId: p.id,
-      eventId: "2026-12-EQUIP",
-      registeredAt: "2026-12-01T09:00:00Z",
+      eventId: "2026-11-EQUIP",
+      registeredAt: "2026-11-12T09:00:00Z",
     });
 
     // Populate initial attendance for demo
@@ -270,7 +270,7 @@ function getInitialState(): PlatformState {
         timestamp = `08:${String(35 + (idx % 25)).padStart(2, "0")} AM`;
       }
 
-      attendance[`${p.id}_2026-12-EQUIP_${sKey}`] = {
+      attendance[`${p.id}_2026-11-EQUIP_${sKey}`] = {
         attended,
         timestamp,
       };
@@ -290,12 +290,60 @@ function getInitialState(): PlatformState {
 
   return {
     events: initialEvents,
-    activeEventId: "2026-12-EQUIP",
+    activeEventId: "2026-11-EQUIP",
     participants,
     registrations,
     attendance,
     churches,
   };
+}
+
+/**
+ * Automatically resolves the active event based on real calendar date and event dates.
+ * Matches current month/year or picks the active or closest gathering.
+ */
+export function resolveDateAwareActiveEvent(events: EquipEvent[], preferredEventId?: string): EquipEvent {
+  // If user explicitly picked an event that exists, honour it
+  if (preferredEventId) {
+    const found = events.find((e) => e.id === preferredEventId);
+    if (found) return found;
+  }
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  // 1. Try to find an event whose date range covers today
+  const ongoing = events.find((e) => {
+    if (!e.startDate || !e.endDate) return false;
+    const s = new Date(e.startDate);
+    const end = new Date(e.endDate);
+    end.setHours(23, 59, 59, 999);
+    return now >= s && now <= end;
+  });
+  if (ongoing) return ongoing;
+
+  // 2. Try to find an event matching current calendar month & year
+  const monthNames = [
+    "january", "february", "march", "april", "may", "june",
+    "july", "august", "september", "october", "november", "december"
+  ];
+  const currentMonthName = monthNames[currentMonth];
+  const sameMonth = events.find((e) => {
+    const matchesMonth = e.monthYear.toLowerCase().includes(currentMonthName);
+    const matchesYear =
+      e.monthYear.includes(String(currentYear)) ||
+      (e.startDate && e.startDate.startsWith(String(currentYear)));
+    return matchesMonth && matchesYear;
+  });
+  if (sameMonth) return sameMonth;
+
+  // 3. Fallback to active event
+  const activeStatus = events.find((e) => e.status === "active");
+  if (activeStatus) return activeStatus;
+
+  // 4. Default to first event
+  return events[0];
 }
 
 // Load state from localStorage or fallback
@@ -311,9 +359,44 @@ export function loadPlatformState(): PlatformState {
       savePlatformState(initial);
       return initial;
     }
-    return JSON.parse(raw);
+
+    const state: PlatformState = JSON.parse(raw);
+
+    // Date-Aware Auto-Migration:
+    // If November 2026 event is missing from stored events, inject it from getInitialState()
+    const hasNovember = state.events.some(
+      (e) => e.id === "2026-11-EQUIP" || e.monthYear.toLowerCase().includes("november 2026")
+    );
+
+    if (!hasNovember) {
+      const fresh = getInitialState();
+      const novEvent = fresh.events.find((e) => e.id === "2026-11-EQUIP");
+      if (novEvent) {
+        state.events = [novEvent, ...state.events];
+        // Populate demo attendees for November as well
+        Object.assign(state.participants, fresh.participants);
+        state.registrations = [...fresh.registrations, ...state.registrations];
+        Object.assign(state.attendance, fresh.attendance);
+      }
+    }
+
+    // If activeEventId was pointing to 2026-12-EQUIP (the old hardcoded default), switch to date-aware current month
+    if (state.activeEventId === "2026-12-EQUIP") {
+      const dateAware = resolveDateAwareActiveEvent(state.events);
+      state.activeEventId = dateAware.id;
+    } else {
+      const currentActive = state.events.find((e) => e.id === state.activeEventId);
+      if (!currentActive) {
+        state.activeEventId = resolveDateAwareActiveEvent(state.events).id;
+      }
+    }
+
+    savePlatformState(state);
+    return state;
   } catch {
-    return getInitialState();
+    const initial = getInitialState();
+    savePlatformState(initial);
+    return initial;
   }
 }
 

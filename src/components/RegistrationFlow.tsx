@@ -25,11 +25,14 @@ import { authClient } from "@/lib/auth-client";
 import { SEED_PARTICIPANTS, SyntheticParticipantSeed } from "@/db/seed-data";
 import PrintableBadgeModal from "./PrintableBadgeModal";
 
-interface RegistrationFlowProps {
+export interface RegistrationFlowProps {
   onBackToDashboard: () => void;
   onParticipantRegistered?: (participant: any, isReturning?: boolean) => void;
   activeEventName?: string;
   activeEventId?: string;
+  activeEventMonthYear?: string;
+  activeEventTheme?: string;
+  activeEventDates?: string;
   existingParticipants?: Record<string, any>;
   churchesList?: string[];
   onAddNewChurch?: (churchName: string) => void;
@@ -38,7 +41,11 @@ interface RegistrationFlowProps {
 export default function RegistrationFlow({
   onBackToDashboard,
   onParticipantRegistered,
-  activeEventName = "Equip December 2026",
+  activeEventName,
+  activeEventId: _activeEventId,
+  activeEventMonthYear,
+  activeEventTheme,
+  activeEventDates,
   existingParticipants,
   churchesList,
   onAddNewChurch,
@@ -47,6 +54,23 @@ export default function RegistrationFlow({
   const [mode, setMode] = useState<"register" | "returning" | "signin" | "confirmed">("register");
   const [isPrintBadgeOpen, setIsPrintBadgeOpen] = useState(false);
   const [isAddingNewChurch, setIsAddingNewChurch] = useState(false);
+
+  // Dynamic Month / Year badge computation
+  const displayEventMonth = useMemo(() => {
+    if (activeEventMonthYear) return activeEventMonthYear;
+    if (activeEventName) {
+      const match = activeEventName.match(
+        /\b(January|February|March|April|May|June|July|August|September|October|November|December)(\s+\d{4})?/i
+      );
+      if (match) return match[0];
+    }
+    return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(new Date());
+  }, [activeEventMonthYear, activeEventName]);
+
+  const displayEventDates = useMemo(() => {
+    if (activeEventDates) return activeEventDates;
+    return `${displayEventMonth} · 3-Day Programme`;
+  }, [activeEventDates, displayEventMonth]);
 
   // Available churches derived from database + props
   const availableChurches = useMemo(() => {
@@ -182,7 +206,7 @@ export default function RegistrationFlow({
         churchName: newParticipant.churchName,
         isOrdained,
         location: newParticipant.location || "Lagos",
-        date: "December 7 – 9, 2026",
+        date: displayEventDates,
       });
 
       setIsSubmitting(false);
@@ -240,7 +264,7 @@ export default function RegistrationFlow({
       churchName: lookupResult.churchName,
       isOrdained,
       location: lookupResult.location || "Lagos",
-      date: activeEventName,
+      date: displayEventDates,
     });
 
     setMode("confirmed");
@@ -288,7 +312,7 @@ export default function RegistrationFlow({
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse" />
           <span className="text-xs font-bold text-[#0F472A] bg-lime-100/90 border border-lime-200/60 px-2.5 py-0.5 rounded-full">
-            December 3-Day Programme
+            {displayEventMonth} 3-Day Programme
           </span>
         </div>
       </header>
@@ -306,7 +330,7 @@ export default function RegistrationFlow({
               Equip 3.0 Registration
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Monthly Leadership Impartation & Ministry Alignment Gathering
+              {activeEventTheme ? `Theme: ${activeEventTheme}` : "Monthly Leadership Impartation & Ministry Alignment Gathering"}
             </p>
           </div>
 
@@ -669,7 +693,7 @@ export default function RegistrationFlow({
                   className="w-full h-10 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98]"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[#A3E635]" />
-                  <span>Confirm December 2026 Programme Pass</span>
+                  <span>Confirm {displayEventMonth} Programme Pass</span>
                 </button>
               </div>
             )}
@@ -883,7 +907,7 @@ export default function RegistrationFlow({
         isOpen={isPrintBadgeOpen}
         onClose={() => setIsPrintBadgeOpen(false)}
         participant={confirmedPass}
-        eventName={activeEventName}
+        eventName={activeEventName || `Equip ${displayEventMonth}`}
       />
     </div>
   );

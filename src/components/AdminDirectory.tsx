@@ -28,7 +28,7 @@ export default function AdminDirectory({
   onBackToDashboard,
   onOpenRegister,
   onOpenSessionAttendance,
-  activeEventName = "Equip December 2026",
+  activeEventName = "Equip November 2026",
   attendeesData,
   sessionsData,
   onToggleSession,

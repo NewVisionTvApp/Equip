@@ -358,4 +358,111 @@ describe("Equip 3.0 Verification Test Suite (Phase 5)", () => {
       assert.ok(row.includes("EQ-82914"));
     });
   });
+
+  /* =========================================================================
+     5. Date-Aware Monthly Event Resolution Tests
+     ========================================================================= */
+  describe("Date-Aware Monthly Event Resolution", () => {
+    interface TestEvent {
+      id: string;
+      title: string;
+      monthYear: string;
+      startDate: string;
+      endDate: string;
+      status: "active" | "open" | "draft" | "completed";
+    }
+
+    function resolveDateAwareEvent(events: TestEvent[], preferredId?: string, mockNow = new Date()): TestEvent {
+      if (preferredId) {
+        const found = events.find((e) => e.id === preferredId);
+        if (found) return found;
+      }
+
+      const currentYear = mockNow.getFullYear();
+      const currentMonth = mockNow.getMonth();
+
+      // Check date range
+      const ongoing = events.find((e) => {
+        if (!e.startDate || !e.endDate) return false;
+        const s = new Date(e.startDate);
+        const end = new Date(e.endDate);
+        end.setHours(23, 59, 59, 999);
+        return mockNow >= s && mockNow <= end;
+      });
+      if (ongoing) return ongoing;
+
+      // Check current calendar month
+      const monthNames = [
+        "january", "february", "march", "april", "may", "june",
+        "july", "august", "september", "october", "november", "december"
+      ];
+      const currentMonthName = monthNames[currentMonth];
+      const sameMonth = events.find((e) => {
+        const matchesMonth = e.monthYear.toLowerCase().includes(currentMonthName);
+        const matchesYear =
+          e.monthYear.includes(String(currentYear)) ||
+          (e.startDate && e.startDate.startsWith(String(currentYear)));
+        return matchesMonth && matchesYear;
+      });
+      if (sameMonth) return sameMonth;
+
+      const activeStatus = events.find((e) => e.status === "active");
+      if (activeStatus) return activeStatus;
+
+      return events[0];
+    }
+
+    test("TC-DATE-01: Correctly auto-selects November 2026 event when date is in November 2026", () => {
+      const mockEvents: TestEvent[] = [
+        {
+          id: "2026-11-EQUIP",
+          title: "Equip November 2026",
+          monthYear: "November 2026",
+          startDate: "2026-11-23",
+          endDate: "2026-11-25",
+          status: "active",
+        },
+        {
+          id: "2026-12-EQUIP",
+          title: "Equip December 2026",
+          monthYear: "December 2026",
+          startDate: "2026-12-14",
+          endDate: "2026-12-16",
+          status: "open",
+        },
+      ];
+
+      // Test with November date
+      const novDate = new Date("2026-11-20T00:00:00Z");
+      const activeEvent = resolveDateAwareEvent(mockEvents, undefined, novDate);
+      assert.strictEqual(activeEvent.id, "2026-11-EQUIP");
+      assert.strictEqual(activeEvent.monthYear, "November 2026");
+    });
+
+    test("TC-DATE-02: Preserves explicit admin selection over automatic calendar detection", () => {
+      const mockEvents: TestEvent[] = [
+        {
+          id: "2026-11-EQUIP",
+          title: "Equip November 2026",
+          monthYear: "November 2026",
+          startDate: "2026-11-23",
+          endDate: "2026-11-25",
+          status: "active",
+        },
+        {
+          id: "2026-12-EQUIP",
+          title: "Equip December 2026",
+          monthYear: "December 2026",
+          startDate: "2026-12-14",
+          endDate: "2026-12-16",
+          status: "open",
+        },
+      ];
+
+      const novDate = new Date("2026-11-20T00:00:00Z");
+      // Admin explicitly selected December
+      const activeEvent = resolveDateAwareEvent(mockEvents, "2026-12-EQUIP", novDate);
+      assert.strictEqual(activeEvent.id, "2026-12-EQUIP");
+    });
+  });
 });

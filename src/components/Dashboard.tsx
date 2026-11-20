@@ -126,7 +126,7 @@ export default function Dashboard({
   onSessionsClick,
   onOpenEventModal,
   activeEventTheme = "Apostolic Mantles & Spiritual Leadership",
-  activeEventMonthYear = "December 2026",
+  activeEventMonthYear = "November 2026",
   totalRegistrations,
   ordainedCount,
   attendeesData,

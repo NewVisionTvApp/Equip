@@ -253,6 +253,13 @@ export default function App() {
           onBackToDashboard={() => setView("dashboard")}
           activeEventName={activeEvent.title}
           activeEventId={activeEvent.id}
+          activeEventMonthYear={activeEvent.monthYear}
+          activeEventTheme={activeEvent.theme}
+          activeEventDates={
+            activeEvent.startDate && activeEvent.endDate
+              ? `${activeEvent.monthYear} (${activeEvent.startDate.split("-")[2]} – ${activeEvent.endDate.split("-")[2]})`
+              : activeEvent.monthYear
+          }
           existingParticipants={platformState.participants}
           churchesList={registeredChurches}
           onAddNewChurch={handleAddNewChurch}
