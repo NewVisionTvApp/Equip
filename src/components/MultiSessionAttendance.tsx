@@ -283,7 +283,6 @@ export default function MultiSessionAttendance({
   const checkedInThisSession = roster.filter((p) => isAttendeeCheckedIn(p, activeSessionKey)).length;
   const totalRoster = roster.length || 184;
   const absentThisSession = Math.max(0, totalRoster - checkedInThisSession);
-  const attendanceRate = totalRoster > 0 ? Math.round((checkedInThisSession / totalRoster) * 100) : 0;
   const clergyCheckedIn = roster.filter((p) => p.isOrdained && isAttendeeCheckedIn(p, activeSessionKey)).length;
   const delegatesCheckedIn = checkedInThisSession - clergyCheckedIn;
 
@@ -413,7 +412,6 @@ export default function MultiSessionAttendance({
         {SESSIONS_DATA.map((s) => {
           const isSelected = activeSessionKey === s.key;
           const count = roster.filter((p) => isAttendeeCheckedIn(p, s.key)).length;
-          const pct = totalRoster > 0 ? Math.round((count / totalRoster) * 100) : 0;
 
           return (
             <button
@@ -436,7 +434,7 @@ export default function MultiSessionAttendance({
                     isSelected ? "bg-[#A3E635] text-[#0F472A]" : "bg-slate-200/80 text-slate-700"
                   }`}
                 >
-                  {pct}%
+                  {count}
                 </span>
               </div>
               <span className={`text-[10px] mt-0.5 truncate max-w-full ${isSelected ? "text-emerald-200" : "text-slate-400"}`}>
@@ -480,8 +478,8 @@ export default function MultiSessionAttendance({
           </div>
 
           <div className="flex items-center justify-between text-xs z-10 pt-2 border-t border-white/10">
-            <span>Verified at Doors: <strong className="text-[#A3E635] font-mono">{checkedInThisSession} / {totalRoster}</strong></span>
-            <span className="font-bold text-white">{attendanceRate}% Turnout</span>
+            <span>Verified at Doors: <strong className="text-[#A3E635] font-mono text-sm">{checkedInThisSession}</strong></span>
+            <span className="font-bold text-emerald-200">{clergyCheckedIn} Ministers · {delegatesCheckedIn} Delegates</span>
           </div>
         </div>
 

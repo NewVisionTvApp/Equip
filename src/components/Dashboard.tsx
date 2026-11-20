@@ -220,7 +220,6 @@ export default function Dashboard({
 
   // 5-Session Turnout Overview across all sessions
   const sessionTurnoutStats = useMemo(() => {
-    const total = attendees.length || 1;
     const sessionKeys: { key: string; label: string; name: string }[] = [
       { key: "mon_am", label: "Mon AM", name: "Session 1" },
       { key: "mon_pm", label: "Mon PM", name: "Session 2" },
@@ -234,11 +233,9 @@ export default function Dashboard({
         const att = a.attendance || a.sessions;
         return Boolean(att?.[s.key] || (s.key === "mon_pm" && a.checkedIn));
       }).length;
-      const pct = Math.round((count / total) * 100);
       return {
         ...s,
         count,
-        pct,
       };
     });
   }, [attendees]);
@@ -385,14 +382,8 @@ export default function Dashboard({
     document.body.removeChild(link);
   };
 
-  const totalRegistered = 184;
   const checkedInCount = currentSession.checkedIn;
-  const turnoutPercent = Math.round((checkedInCount / totalRegistered) * 100);
-
-  // Apple Watch style gauge parameters
-  // Semi-circle arc length for radius 70 = Math.PI * 70 ≈ 220
-  const arcLength = 220;
-  const arcOffset = arcLength - (arcLength * turnoutPercent) / 100;
+  const maxSessionCheckedIn = Math.max(...SESSIONS.map((s) => s.checkedIn), 1);
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] bg-[radial-gradient(ellipse_100%_40%_at_50%_-10%,rgba(16,185,129,0.06),transparent)] text-slate-900 flex p-4 lg:p-6 gap-6 font-sans antialiased selection:bg-[#A3E635] selection:text-[#0F472A]">
@@ -699,9 +690,9 @@ export default function Dashboard({
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                  {totalRegistrations ? `${Math.round(((ordainedCount ?? 72) / totalRegistrations) * 100)}%` : "39.1%"}
+                  {ordainedCount ?? 72} Ministers
                 </span>
-                <span className="text-[11px] text-slate-400">Bishops & Pastors</span>
+                <span className="text-[11px] text-slate-400">Bishops, Apostles & Pastors</span>
               </div>
             </div>
           </div>
@@ -741,9 +732,9 @@ export default function Dashboard({
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                  {turnoutPercent}%
+                  {currentSession.checkedIn} Present
                 </span>
-                <span className="text-[11px] text-emerald-700 font-medium">Verified arrival</span>
+                <span className="text-[11px] text-emerald-700 font-medium">Verified at doors</span>
               </div>
             </div>
           </div>
@@ -777,8 +768,8 @@ export default function Dashboard({
                     {/* Floating Apple Bounce Badge for Active Session */}
                     {isSelected && (
                       <div className="absolute -top-7 flex flex-col items-center animate-in zoom-in-75 duration-200 ease-apple-bounce">
-                        <span className="text-[10px] font-extrabold bg-[#0F472A] text-white px-2 py-0.5 rounded-full shadow-xs">
-                          {s.percent}%
+                        <span className="text-[10px] font-extrabold bg-[#0F472A] text-white px-2 py-0.5 rounded-full shadow-xs whitespace-nowrap">
+                          {s.checkedIn} Present
                         </span>
                         <div className="w-1.5 h-1.5 bg-[#0F472A] rotate-45 -mt-0.5" />
                       </div>
@@ -794,7 +785,7 @@ export default function Dashboard({
                             ? "bg-[#166534]/70"
                             : "bg-[#84CC16]/70"
                         }`}
-                        style={{ height: `${s.percent}%` }}
+                        style={{ height: `${Math.round((s.checkedIn / maxSessionCheckedIn) * 80 + 20)}%` }}
                       />
                     </div>
 
@@ -992,59 +983,38 @@ export default function Dashboard({
             </div>
           </div>
 
-          {/* Col 2 (3 cols): Turnout Progress Gauge (Apple Watch Style Arc Sweeping Transition) */}
-          <div className="lg:col-span-3 bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring flex flex-col justify-between items-center text-center h-72">
-            <div className="w-full text-left">
-              <span className="text-sm font-bold text-slate-900 tracking-tight">Project Progress</span>
+          {/* Col 2 (3 cols): Active Session Headcount (Uncapped Volume Focus) */}
+          <div className="lg:col-span-3 bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring flex flex-col justify-between h-72">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-slate-900 tracking-tight">Session Headcount</span>
+              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60">
+                {currentSession.short}
+              </span>
             </div>
 
-            {/* Apple Watch Fluid Arc Gauge */}
-            <div className="flex flex-col items-center justify-center my-auto relative">
-              <svg width="160" height="90" viewBox="0 0 180 95" className="overflow-visible">
-                {/* Background Track */}
-                <path
-                  d="M 15 90 A 75 75 0 0 1 165 90"
-                  fill="none"
-                  stroke="#E2E8F0"
-                  strokeWidth="15"
-                  strokeLinecap="round"
-                />
-                {/* Dynamic Spring Progress Arc */}
-                <path
-                  d="M 15 90 A 75 75 0 0 1 165 90"
-                  fill="none"
-                  stroke="url(#apple-gauge-gradient)"
-                  strokeWidth="15"
-                  strokeLinecap="round"
-                  strokeDasharray={arcLength}
-                  strokeDashoffset={arcOffset}
-                  className="transition-[stroke-dashoffset] duration-700 ease-apple-spring"
-                />
-                <defs>
-                  <linearGradient id="apple-gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#0F472A" />
-                    <stop offset="100%" stopColor="#84CC16" />
-                  </linearGradient>
-                </defs>
-              </svg>
-
-              <div className="flex flex-col items-center -mt-2">
-                <span className="text-3xl font-extrabold text-slate-900 tracking-[-0.04em] tabular-nums">
-                  {turnoutPercent}%
-                </span>
-                <span className="text-[11px] text-slate-500 font-semibold">Session Progress</span>
-              </div>
+            {/* Central Headcount Display */}
+            <div className="flex flex-col items-center justify-center my-auto text-center py-2">
+              <span className="text-4xl sm:text-5xl font-black text-slate-900 tracking-[-0.05em] tabular-nums">
+                {checkedInCount}
+              </span>
+              <span className="text-xs font-bold text-emerald-800 mt-1">
+                Attendees Verified at Doors
+              </span>
+              <span className="text-[11px] text-slate-400 font-medium">
+                Venue: {currentSession.hall}
+              </span>
             </div>
 
-            {/* Legend */}
-            <div className="flex items-center gap-4 text-xs text-slate-600 font-medium">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#0F472A]" />
-                <span>Completed</span>
+            {/* Ministerial & Delegate Breakdown without Cap */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <div className="flex flex-col">
+                <span className="font-extrabold text-slate-800 font-mono text-sm">{ordainedCount ?? 72}</span>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Ministers</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-300" />
-                <span>Pending</span>
+              <div className="h-6 w-px bg-slate-200" />
+              <div className="flex flex-col text-right">
+                <span className="font-extrabold text-slate-800 font-mono text-sm">112</span>
+                <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Delegates</span>
               </div>
             </div>
           </div>
@@ -1061,19 +1031,19 @@ export default function Dashboard({
               <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-pulse" />
             </div>
 
-            <div className="flex flex-col gap-2 my-auto z-10">
+            <div className="flex flex-col gap-1.5 my-auto z-10">
               {sessionTurnoutStats.map((s) => (
-                <div key={s.key} className="flex flex-col gap-0.5">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-semibold text-emerald-100">{s.label} · {s.name}</span>
-                    <span className="font-mono text-emerald-300 font-bold">{s.count} ({s.pct}%)</span>
+                <div
+                  key={s.key}
+                  className="flex items-center justify-between text-xs py-1 px-2.5 rounded-lg bg-white/5 border border-white/5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-[#A3E635] text-[11px]">{s.label}</span>
+                    <span className="font-medium text-emerald-100 text-xs truncate max-w-[170px]">{s.name}</span>
                   </div>
-                  <div className="w-full h-1.5 bg-black/30 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-emerald-500 to-[#A3E635] rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, Math.max(s.pct, 4))}%` }}
-                    />
-                  </div>
+                  <span className="font-mono text-xs text-[#A3E635] font-extrabold tabular-nums bg-black/30 px-2 py-0.5 rounded-md border border-white/10 shrink-0">
+                    {s.count} Present
+                  </span>
                 </div>
               ))}
             </div>
