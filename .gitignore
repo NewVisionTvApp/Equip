@@ -1,28 +1,75 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+.npm/
+.yarn/
 
-# Build and cache
-.next/
+# Production Build and Bundles
 dist/
+build/
 out/
+.next/
+
+# Cloudflare & Wrangler Local Runtime
 .wrangler/
-.turbo/
-.cache/
+.mf/
+.dev.vars
+.dev.vars.local
 
-# Environment files
+# Databases & SQLite Local Stores
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.sync_state.json
+*.sync_state.json
+
+# Environment Variables & Secrets (CRITICAL)
 .env
-.env.local
-.env.production
-.env*.local
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
 
-# Logs
+# Caches & Temporary Artifacts
+.cache/
+.turbo/
+.parcel-cache/
+.vite-temp/
+*.tmp
+*.temp
+
+# Logs & Diagnostics
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# System
+# Operating System Files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
-.sync_state.json
+Desktop.ini
+
+# IDE & Editor Files
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# Large Executables & Binary Artifacts
+*.exe
+*.dll
+*.dylib
+*.so
