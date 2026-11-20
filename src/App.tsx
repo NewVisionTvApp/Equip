@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Dashboard from "./components/Dashboard";
 import RegistrationFlow from "./components/RegistrationFlow";
 import AdminDirectory from "./components/AdminDirectory";
@@ -20,10 +20,41 @@ import {
   SessionConfig,
 } from "./lib/store";
 
+type AppView = "dashboard" | "directory" | "attendance" | "register";
+
+function getRouteFromLocation(): AppView {
+  if (typeof window === "undefined") return "dashboard";
+  const path = window.location.pathname.toLowerCase();
+  const hash = window.location.hash.toLowerCase().replace("#", "").replace("/", "");
+
+  if (path === "/register" || hash === "register") return "register";
+  if (path === "/attendance" || path === "/usher" || hash === "attendance" || hash === "usher") return "attendance";
+  if (path === "/directory" || hash === "directory") return "directory";
+  return "dashboard";
+}
+
 export default function App() {
-  const [view, setView] = useState<"dashboard" | "directory" | "attendance" | "register">("dashboard");
+  const [view, setView] = useState<AppView>(() => getRouteFromLocation());
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [platformState, setPlatformState] = useState(() => loadPlatformState());
+
+  // Listen for browser Back / Forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      setView(getRouteFromLocation());
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  // Navigate to a view and update browser URL
+  const navigateTo = (newView: AppView) => {
+    setView(newView);
+    const targetPath = newView === "dashboard" ? "/" : `/${newView}`;
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, "", targetPath);
+    }
+  };
 
   const activeEvent = useMemo(
     () => platformState.events.find((e) => e.id === platformState.activeEventId) || platformState.events[0],
@@ -149,7 +180,7 @@ export default function App() {
         <div className="flex items-center gap-1.5 flex-wrap">
           <button
             type="button"
-            onClick={() => setView("dashboard")}
+            onClick={() => navigateTo("dashboard")}
             className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
               view === "dashboard"
                 ? "bg-[#0F472A] text-[#A3E635]"
@@ -161,7 +192,7 @@ export default function App() {
 
           <button
             type="button"
-            onClick={() => setView("directory")}
+            onClick={() => navigateTo("directory")}
             className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
               view === "directory"
                 ? "bg-[#0F472A] text-[#A3E635]"
@@ -173,7 +204,7 @@ export default function App() {
 
           <button
             type="button"
-            onClick={() => setView("attendance")}
+            onClick={() => navigateTo("attendance")}
             className={`px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center gap-1.5 ${
               view === "attendance"
                 ? "bg-[#0F472A] text-[#A3E635]"
@@ -186,7 +217,7 @@ export default function App() {
 
           <button
             type="button"
-            onClick={() => setView("register")}
+            onClick={() => navigateTo("register")}
             className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
               view === "register"
                 ? "bg-[#0F472A] text-[#A3E635]"
@@ -211,9 +242,9 @@ export default function App() {
       {/* Main View Router */}
       {view === "dashboard" && (
         <Dashboard
-          onRegisterClick={() => setView("register")}
-          onDirectoryClick={() => setView("directory")}
-          onSessionsClick={() => setView("attendance")}
+          onRegisterClick={() => navigateTo("register")}
+          onDirectoryClick={() => navigateTo("directory")}
+          onSessionsClick={() => navigateTo("attendance")}
           onOpenEventModal={() => setIsEventModalOpen(true)}
           activeEventName={activeEvent.title}
           activeEventTheme={activeEvent.theme}
@@ -228,9 +259,9 @@ export default function App() {
 
       {view === "directory" && (
         <AdminDirectory
-          onBackToDashboard={() => setView("dashboard")}
-          onOpenRegister={() => setView("register")}
-          onOpenSessionAttendance={() => setView("attendance")}
+          onBackToDashboard={() => navigateTo("dashboard")}
+          onOpenRegister={() => navigateTo("register")}
+          onOpenSessionAttendance={() => navigateTo("attendance")}
           activeEventName={activeEvent.title}
           attendeesData={activeAttendees}
           sessionsData={activeEvent.sessions}
@@ -240,9 +271,9 @@ export default function App() {
 
       {view === "attendance" && (
         <MultiSessionAttendance
-          onBackToDashboard={() => setView("dashboard")}
-          onOpenDirectory={() => setView("directory")}
-          onOpenRegister={() => setView("register")}
+          onBackToDashboard={() => navigateTo("dashboard")}
+          onOpenDirectory={() => navigateTo("directory")}
+          onOpenRegister={() => navigateTo("register")}
           activeEventName={activeEvent.title}
           activeEventId={activeEvent.id}
           rosterData={activeAttendees}
@@ -254,7 +285,7 @@ export default function App() {
 
       {view === "register" && (
         <RegistrationFlow
-          onBackToDashboard={() => setView("dashboard")}
+          onBackToDashboard={() => navigateTo("dashboard")}
           activeEventName={activeEvent.title}
           activeEventId={activeEvent.id}
           activeEventMonthYear={activeEvent.monthYear}
