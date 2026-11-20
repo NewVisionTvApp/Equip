@@ -527,7 +527,7 @@ export default function AdminDirectory({
                     <h3 className="text-lg font-extrabold text-slate-900 truncate">{selectedParticipant.fullName}</h3>
                     {selectedParticipant.isOrdained && (
                       <span className="text-[10px] font-extrabold bg-[#0F472A] text-[#A3E635] px-2 py-0.5 rounded-full uppercase shrink-0">
-                        Clergy VIP
+                        Ordained Minister
                       </span>
                     )}
                   </div>
@@ -652,7 +652,7 @@ export default function AdminDirectory({
                     onChange={(e) => setEditForm({ ...editForm, isOrdained: e.target.checked })}
                     className="w-4 h-4 rounded text-[#0F472A] focus:ring-[#0F472A]"
                   />
-                  <span className="font-bold text-slate-700 text-xs">Ordained Minister / Pastor (Clergy VIP)</span>
+                  <span className="font-bold text-slate-700 text-xs">Ordained Minister / Pastor</span>
                 </label>
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">

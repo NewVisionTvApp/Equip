@@ -14,14 +14,11 @@ import {
   ArrowUpRight,
   QrCode,
   Play,
-  Pause,
-  RotateCcw,
   Download,
   CheckCircle2,
   Award,
   Check,
   Smartphone,
-  Sparkles,
   Pencil,
   Camera,
 } from "lucide-react";
@@ -221,24 +218,30 @@ export default function Dashboard({
     return entries.length > 0 ? entries : DELEGATIONS;
   }, [attendees]);
 
-  // Timer State (Countdown to session end or next event)
-  const [secondsRemaining, setSecondsRemaining] = useState(9910); // 02:45:10
-  const [isTimerRunning, setIsTimerRunning] = useState(true);
+  // 5-Session Turnout Overview across all sessions
+  const sessionTurnoutStats = useMemo(() => {
+    const total = attendees.length || 1;
+    const sessionKeys: { key: string; label: string; name: string }[] = [
+      { key: "mon_am", label: "Mon AM", name: "Session 1" },
+      { key: "mon_pm", label: "Mon PM", name: "Session 2" },
+      { key: "tue_am", label: "Tue AM", name: "Session 3" },
+      { key: "tue_pm", label: "Tue PM", name: "Session 4" },
+      { key: "wed_am", label: "Wed AM", name: "Session 5" },
+    ];
 
-  useEffect(() => {
-    if (!isTimerRunning) return;
-    const interval = setInterval(() => {
-      setSecondsRemaining((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isTimerRunning]);
-
-  const formatTimer = (totalSeconds: number) => {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  };
+    return sessionKeys.map((s) => {
+      const count = attendees.filter((a) => {
+        const att = a.attendance || a.sessions;
+        return Boolean(att?.[s.key] || (s.key === "mon_pm" && a.checkedIn));
+      }).length;
+      const pct = Math.round((count / total) * 100);
+      return {
+        ...s,
+        count,
+        pct,
+      };
+    });
+  }, [attendees]);
 
   // Subtle Apple Audio feedback (synthesized lightweight pop)
   const playHapticAudio = () => {
@@ -1046,61 +1049,42 @@ export default function Dashboard({
             </div>
           </div>
 
-          {/* Col 3 (4 cols): Time Tracker with Fluid Topographic Wave Motion */}
+          {/* Col 3 (4 cols): 5-Session Attendance Tracker */}
           <div className="lg:col-span-4 bg-gradient-to-br from-[#0B3A23] via-[#0D3821] to-[#041D11] text-white rounded-2xl p-5 flex flex-col justify-between h-72 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring relative overflow-hidden border border-emerald-900/40 ring-1 ring-inset ring-white/10 group">
-            {/* Apple 3D Wave Ribbons with gentle hover shift */}
-            <svg
-              className="absolute inset-0 w-full h-full text-[#A3E635]/15 pointer-events-none group-hover:scale-105 transition-transform duration-700 ease-apple-spring"
-              viewBox="0 0 300 300"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M -40,160 Q 60,60 160,160 T 360,160" />
-              <path d="M -40,190 Q 60,90 160,190 T 360,190" />
-              <path d="M -40,220 Q 60,120 160,220 T 360,220" />
-              <path d="M -40,250 Q 60,150 160,250 T 360,250" />
-            </svg>
-
             <div className="flex justify-between items-center z-10">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-emerald-300 tracking-tight">Time Tracker</span>
-                <Sparkles className="w-3 h-3 text-[#A3E635]" />
+                <span className="text-xs font-bold text-emerald-300 tracking-tight">5-Session Programme Turnout</span>
+                <span className="text-[10px] font-extrabold bg-[#A3E635] text-[#0F472A] px-1.5 py-0.2 rounded-full">
+                  Live
+                </span>
               </div>
               <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-pulse" />
             </div>
 
-            <div className="flex flex-col items-center justify-center my-auto gap-1 z-10">
-              <span className="font-mono text-3xl sm:text-4xl font-extrabold text-white tracking-widest tabular-nums filter drop-shadow">
-                {formatTimer(secondsRemaining)}
-              </span>
-              <span className="text-[11px] text-emerald-200/90 font-medium">Main Auditorium Live</span>
+            <div className="flex flex-col gap-2 my-auto z-10">
+              {sessionTurnoutStats.map((s) => (
+                <div key={s.key} className="flex flex-col gap-0.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-semibold text-emerald-100">{s.label} · {s.name}</span>
+                    <span className="font-mono text-emerald-300 font-bold">{s.count} ({s.pct}%)</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-black/30 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-500 to-[#A3E635] rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(100, Math.max(s.pct, 4))}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <div className="flex items-center justify-center gap-3 z-10">
-              <button
-                type="button"
-                onClick={() => {
-                  playHapticAudio();
-                  setIsTimerRunning(!isTimerRunning);
-                }}
-                className="w-10 h-10 rounded-full bg-white text-[#0D3821] hover:bg-emerald-50 active:scale-90 flex items-center justify-center transition-all duration-150 ease-apple-spring shadow-md"
-                aria-label={isTimerRunning ? "Pause timer" : "Resume timer"}
-              >
-                {isTimerRunning ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  playHapticAudio();
-                  setSecondsRemaining(9910);
-                }}
-                className="w-10 h-10 rounded-full bg-red-500 hover:bg-red-600 active:scale-90 flex items-center justify-center text-white transition-all duration-150 ease-apple-spring shadow-md"
-                aria-label="Reset timer"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onSessionsClick}
+              className="w-full h-8 bg-white/15 hover:bg-white/25 active:scale-[0.98] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-150 z-10 border border-white/15 shadow-2xs"
+            >
+              <span>Open Usher Mobile Desk →</span>
+            </button>
           </div>
         </section>
 

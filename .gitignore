@@ -25,3 +25,4 @@ pnpm-debug.log*
 # System
 .DS_Store
 Thumbs.db
+.sync_state.json

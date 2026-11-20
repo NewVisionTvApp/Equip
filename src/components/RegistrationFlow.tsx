@@ -812,7 +812,7 @@ export default function RegistrationFlow({
                       : "bg-white/20 text-white"
                   }`}
                 >
-                  {confirmedPass.isOrdained ? "Clergy VIP" : "Delegate"}
+                  {confirmedPass.isOrdained ? "Ordained Minister" : "Delegate"}
                 </span>
               </div>
 
