@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import {
-  QrCode,
   CheckCircle2,
   Copy,
   Check,
@@ -19,7 +18,9 @@ import {
   Search,
   Printer,
   Plus,
+  Share2,
 } from "lucide-react";
+import QRCodeView from "./QRCodeView";
 import { generateParticipantId } from "@/lib/id-generator";
 import { authClient } from "@/lib/auth-client";
 import { SEED_PARTICIPANTS, SyntheticParticipantSeed } from "@/db/seed-data";
@@ -268,6 +269,20 @@ export default function RegistrationFlow({
     });
 
     setMode("confirmed");
+  };
+
+  // 1-Tap WhatsApp Share for Delegates
+  const handleShareWhatsApp = () => {
+    if (!confirmedPass) return;
+    const text =
+      `*Equip 3.0 Ministerial Pass*\n` +
+      `*Name:* ${confirmedPass.fullName}\n` +
+      `*Unique ID:* ${confirmedPass.id}\n` +
+      `*Ministry:* ${confirmedPass.churchName}\n` +
+      `*Role:* ${confirmedPass.roleOffice}\n` +
+      `*Gathering:* ${displayEventMonth} 3-Day Programme\n\n` +
+      `Please save this message or present this ID at church entrance doors during each of the 5 sessions for fast check-in.`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
   // Handle Better Auth Sign-In
@@ -838,15 +853,16 @@ export default function RegistrationFlow({
                 </div>
               </div>
 
-              {/* QR Code Barcode Representation */}
-              <div className="bg-white rounded-2xl p-3.5 flex items-center justify-between z-10 text-slate-900 shadow-md">
+              {/* Real Scannable QR Code */}
+              <div className="bg-white rounded-2xl p-3 flex items-center justify-between z-10 text-slate-900 shadow-md">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200">
-                    <QrCode className="w-6 h-6 text-[#0F472A]" />
+                  <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center shrink-0 border border-slate-200 p-1 shadow-xs overflow-hidden">
+                    <QRCodeView value={confirmedPass.id} size={50} darkColor="#0F472A" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-xs font-extrabold text-slate-900">Door Verification Pass</span>
+                    <span className="text-xs font-extrabold text-slate-900">Door Usher Scannable Pass</span>
                     <span className="text-[10px] text-slate-500">Scan at entrance for all 5 sessions</span>
+                    <span className="text-[10px] font-mono font-bold text-[#0F472A] mt-0.5">{confirmedPass.id}</span>
                   </div>
                 </div>
 
@@ -867,15 +883,26 @@ export default function RegistrationFlow({
               </p>
             </div>
 
-            {/* Print Badge Button for Non-Computer Literate Attendees / Walk-ins */}
-            <button
-              type="button"
-              onClick={() => setIsPrintBadgeOpen(true)}
-              className="w-full h-11 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-apple-card transition-all"
-            >
-              <Printer className="w-4 h-4 text-[#A3E635]" />
-              <span>Print Physical Lanyard Badge / Slip (No Phone Needed)</span>
-            </button>
+            {/* Quick Action Grid: WhatsApp Share & Physical Print */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={handleShareWhatsApp}
+                className="h-11 bg-[#25D366] hover:bg-[#20BD5A] active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-apple-card transition-all"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Send Pass to WhatsApp</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPrintBadgeOpen(true)}
+                className="h-11 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-apple-card transition-all"
+              >
+                <Printer className="w-4 h-4 text-[#A3E635]" />
+                <span>Print Badge Slip</span>
+              </button>
+            </div>
 
             {/* Action Buttons */}
             <div className="w-full flex items-center gap-3">

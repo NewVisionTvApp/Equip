@@ -16,7 +16,9 @@
     "better-auth": "^1.1.20",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.38.4",
+    "jsqr": "^1.4.0",
     "lucide-react": "^0.475.0",
+    "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-aria-components": "1.17.0",
     "react-dom": "^19.0.0",
@@ -26,6 +28,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250214.0",
     "@types/node": "^22.13.4",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",

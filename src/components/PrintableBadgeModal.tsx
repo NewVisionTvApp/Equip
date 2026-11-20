@@ -1,4 +1,5 @@
-import { Printer, X, QrCode } from "lucide-react";
+import { Printer, X } from "lucide-react";
+import QRCodeView from "./QRCodeView";
 
 interface PrintableBadgeProps {
   isOpen: boolean;
@@ -93,8 +94,8 @@ export default function PrintableBadgeModal({
 
           {/* QR Code Graphic for Usher Entrance Door Scanner */}
           <div className="flex items-center justify-center gap-3 w-full pt-1">
-            <div className="w-16 h-16 bg-white border border-slate-200 rounded-xl p-1 flex items-center justify-center shadow-xs">
-              <QrCode className="w-full h-full text-[#0F472A]" />
+            <div className="w-16 h-16 bg-white border border-slate-300 rounded-xl p-1 flex items-center justify-center shadow-xs overflow-hidden print:border-black">
+              <QRCodeView value={participant.id} size={58} darkColor="#000000" />
             </div>
             <div className="text-left text-[11px] text-slate-500 flex flex-col">
               <span className="font-bold text-slate-900">Door Usher Scanner</span>

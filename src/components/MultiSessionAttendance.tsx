@@ -9,11 +9,13 @@ import {
   Printer,
   Plus,
   Pencil,
+  Camera,
 } from "lucide-react";
 import { SEED_PARTICIPANTS } from "@/db/seed-data";
 import { SessionConfig } from "@/lib/store";
 import PrintableBadgeModal from "./PrintableBadgeModal";
 import EditSessionModal from "./EditSessionModal";
+import CameraScannerModal from "./CameraScannerModal";
 
 interface MultiSessionAttendanceProps {
   onBackToDashboard: () => void;
@@ -96,6 +98,7 @@ export default function MultiSessionAttendance({
   const [scanAlert, setScanAlert] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [badgeParticipant, setBadgeParticipant] = useState<any | null>(null);
   const [editingSession, setEditingSession] = useState<SessionConfig | null>(null);
+  const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
 
   // Attendees with session attendance map (using rosterData if provided, or default seeds)
   const [internalRoster, setInternalRoster] = useState(() =>
@@ -193,12 +196,11 @@ export default function MultiSessionAttendance({
     );
   };
 
-  // Handle Door Fast Scan
-  const handleFastScan = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fastScanInput.trim()) return;
+  // Core Verification Logic (used by both Keyboard and Camera Scanner)
+  const verifyAttendee = (query: string) => {
+    if (!query.trim()) return;
 
-    const q = fastScanInput.trim().toUpperCase();
+    const q = query.trim().toUpperCase();
     const match = roster.find(
       (p) =>
         p.id.toUpperCase() === q ||
@@ -225,12 +227,18 @@ export default function MultiSessionAttendance({
       setFastScanInput("");
     } else {
       setScanAlert({
-        message: `No participant matching "${fastScanInput}". Check ID.`,
+        message: `No participant matching "${query}". Check ID or spelling.`,
         type: "error",
       });
     }
 
     setTimeout(() => setScanAlert(null), 3500);
+  };
+
+  // Handle Door Fast Scan Form Submit
+  const handleFastScan = (e: React.FormEvent) => {
+    e.preventDefault();
+    verifyAttendee(fastScanInput);
   };
 
   // Filtered attendees
@@ -441,11 +449,20 @@ export default function MultiSessionAttendance({
               className="flex-1 h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A]"
             />
             <button
+              type="button"
+              onClick={() => setIsCameraScannerOpen(true)}
+              className="h-11 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 shrink-0"
+              title="Open Camera QR Scanner"
+            >
+              <Camera className="w-4 h-4 text-[#0F472A]" />
+              <span className="hidden sm:inline">Camera Scan</span>
+            </button>
+            <button
               type="submit"
-              className="h-11 px-5 bg-[#0F472A] hover:bg-[#165A36] active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all shrink-0"
+              className="h-11 px-4 bg-[#0F472A] hover:bg-[#165A36] active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all shrink-0"
             >
               <Check className="w-4 h-4" />
-              <span>Verify Entrance</span>
+              <span>Verify</span>
             </button>
           </form>
 
@@ -603,6 +620,14 @@ export default function MultiSessionAttendance({
             onUpdateSession(key, updatedData);
           }
         }}
+      />
+
+      {/* Live Door Camera Scanner */}
+      <CameraScannerModal
+        isOpen={isCameraScannerOpen}
+        onClose={() => setIsCameraScannerOpen(false)}
+        onScan={(id) => verifyAttendee(id)}
+        activeSessionName={`${activeSession.short} · ${activeSession.name}`}
       />
     </div>
   );

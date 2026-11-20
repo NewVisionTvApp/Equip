@@ -23,10 +23,12 @@ import {
   Smartphone,
   Sparkles,
   Pencil,
+  Camera,
 } from "lucide-react";
 import { SEED_PARTICIPANTS } from "@/db/seed-data";
 import { SessionConfig } from "@/lib/store";
 import EditSessionModal from "./EditSessionModal";
+import CameraScannerModal from "./CameraScannerModal";
 
 // The 5 Gathering Sessions
 const SESSIONS = [
@@ -140,6 +142,7 @@ export default function Dashboard({
   const [scanFeedback, setScanFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [recentlyToggledId, setRecentlyToggledId] = useState<string | null>(null);
   const [editingSession, setEditingSession] = useState<SessionConfig | null>(null);
+  const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
 
   // Attendees State with initial realistic statuses (using attendeesData when available)
   const [attendees, setAttendees] = useState(() =>
@@ -282,12 +285,11 @@ export default function Dashboard({
     );
   };
 
-  // Fast Door Scan handler
-  const handleFastScanSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fastScanId.trim()) return;
+  // Fast Door Scan verification logic
+  const verifyDashboardAttendee = (query: string) => {
+    if (!query.trim()) return;
 
-    const cleaned = fastScanId.trim().toUpperCase();
+    const cleaned = query.trim().toUpperCase();
     const match = attendees.find(
       (a) =>
         a.id.toUpperCase() === cleaned ||
@@ -312,12 +314,18 @@ export default function Dashboard({
       setFastScanId("");
     } else {
       setScanFeedback({
-        message: `No participant matching "${fastScanId}". Check ID or register new.`,
+        message: `No participant matching "${query}". Check ID or register new.`,
         type: "error",
       });
     }
 
     setTimeout(() => setScanFeedback(null), 3500);
+  };
+
+  // Fast Door Scan form submit handler
+  const handleFastScanSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    verifyDashboardAttendee(fastScanId);
   };
 
   // Export CSV
@@ -1086,6 +1094,15 @@ export default function Dashboard({
               className="w-full h-9 px-3 bg-slate-50/80 border border-slate-200/80 rounded-xl text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all duration-150 ease-apple-spring"
             />
             <button
+              type="button"
+              onClick={() => setIsCameraScannerOpen(true)}
+              className="h-9 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 shrink-0"
+              title="Open Camera QR Scanner"
+            >
+              <Camera className="w-3.5 h-3.5 text-[#0F472A]" />
+              <span className="hidden sm:inline">Camera</span>
+            </button>
+            <button
               type="submit"
               className="h-9 px-4 bg-[#0F472A] hover:bg-[#165A36] active:scale-[0.96] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-all duration-150 ease-apple-spring shadow-xs"
             >
@@ -1119,6 +1136,14 @@ export default function Dashboard({
             onUpdateSession(key, updatedData);
           }
         }}
+      />
+
+      {/* Live Door Camera Scanner */}
+      <CameraScannerModal
+        isOpen={isCameraScannerOpen}
+        onClose={() => setIsCameraScannerOpen(false)}
+        onScan={(id) => verifyDashboardAttendee(id)}
+        activeSessionName={`${activeEventMonthYear} · Fast Verification`}
       />
     </div>
   );
