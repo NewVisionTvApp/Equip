@@ -211,7 +211,7 @@ export default function App() {
       {/* Top Banner Navigation Bar */}
       <div className="bg-[#0B0F17] text-white px-4 py-2 flex flex-col sm:flex-row sm:items-center justify-between text-xs border-b border-slate-800 gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-pulse" />
+          <img src="/logo.png" alt="Equip Logo" className="w-6 h-5 object-contain" />
           <span className="font-bold text-slate-200">Equip 3.0 Platform</span>
           <span className="text-slate-600 hidden sm:inline">|</span>
 

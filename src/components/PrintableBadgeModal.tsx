@@ -55,8 +55,8 @@ export default function PrintableBadgeModal({
           {/* Badge Brand Header */}
           <div className="flex items-center justify-between w-full border-b pb-3 border-slate-200">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#0F472A] p-1 flex items-center justify-center print:border print:border-black">
-                <img src="/logo.png" alt="Equip" className="w-full h-full object-contain filter invert" />
+              <div className="w-8 h-8 rounded-lg bg-emerald-50/80 p-1 flex items-center justify-center border border-emerald-200/80">
+                <img src="/logo.png" alt="Equip" className="w-full h-full object-contain" />
               </div>
               <span className="font-extrabold text-xs tracking-tight text-slate-900">EQUIP 3.0</span>
             </div>
