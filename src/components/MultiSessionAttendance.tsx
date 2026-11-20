@@ -167,6 +167,19 @@ export default function MultiSessionAttendance({
     }
   };
 
+  // Helper to safely read attendance regardless of data format
+  const isAttendeeCheckedIn = (p: any, sKey: string): boolean => {
+    if (!p) return false;
+    const att = p.attendance || p.sessions;
+    return Boolean(att?.[sKey]);
+  };
+
+  const getAttendeeCheckInTime = (p: any, sKey: string): string | null => {
+    if (!p) return null;
+    const times = p.timestamps || p.sessionTimes;
+    return times?.[sKey] || null;
+  };
+
   // Toggle single session check-in
   const toggleAttendance = (participantId: string, sessionKey: string) => {
     playHapticAudio();
@@ -176,18 +189,26 @@ export default function MultiSessionAttendance({
     setInternalRoster((prev) =>
       prev.map((p) => {
         if (p.id === participantId) {
-          const current = (p.attendance as any)?.[sessionKey];
+          const current = isAttendeeCheckedIn(p, sessionKey);
+          const next = !current;
+          const time = next ? new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null;
           return {
             ...p,
             attendance: {
-              ...p.attendance,
-              [sessionKey]: !current,
+              ...(p.attendance || (p as any).sessions || {}),
+              [sessionKey]: next,
+            },
+            sessions: {
+              ...((p as any).sessions || p.attendance || {}),
+              [sessionKey]: next,
             },
             timestamps: {
-              ...p.timestamps,
-              [sessionKey]: !current
-                ? new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                : null,
+              ...(p.timestamps || (p as any).sessionTimes || {}),
+              [sessionKey]: time,
+            },
+            sessionTimes: {
+              ...((p as any).sessionTimes || p.timestamps || {}),
+              [sessionKey]: time,
             },
           };
         }
@@ -210,7 +231,7 @@ export default function MultiSessionAttendance({
 
     if (match) {
       playHapticAudio();
-      const isAlreadyChecked = (match.attendance as any)[activeSessionKey];
+      const isAlreadyChecked = isAttendeeCheckedIn(match, activeSessionKey);
 
       if (isAlreadyChecked) {
         setScanAlert({
@@ -257,10 +278,10 @@ export default function MultiSessionAttendance({
   }, [roster, searchQuery]);
 
   // Session Statistics
-  const checkedInThisSession = roster.filter((p) => (p.attendance as any)[activeSessionKey]).length;
-  const totalRoster = 184;
-  const attendanceRate = Math.round((checkedInThisSession / totalRoster) * 100);
-  const clergyCheckedIn = roster.filter((p) => p.isOrdained && (p.attendance as any)[activeSessionKey]).length;
+  const checkedInThisSession = roster.filter((p) => isAttendeeCheckedIn(p, activeSessionKey)).length;
+  const totalRoster = roster.length || 184;
+  const attendanceRate = totalRoster > 0 ? Math.round((checkedInThisSession / totalRoster) * 100) : 0;
+  const clergyCheckedIn = roster.filter((p) => p.isOrdained && isAttendeeCheckedIn(p, activeSessionKey)).length;
   const delegatesCheckedIn = checkedInThisSession - clergyCheckedIn;
 
   // Export Session CSV
@@ -281,8 +302,8 @@ export default function MultiSessionAttendance({
       p.phone,
       `"${p.churchName}"`,
       p.roleOffice,
-      (p.attendance as any)[activeSessionKey] ? "Yes" : "No",
-      (p.timestamps as any)[activeSessionKey] || "—",
+      isAttendeeCheckedIn(p, activeSessionKey) ? "Yes" : "No",
+      getAttendeeCheckInTime(p, activeSessionKey) || "—",
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
@@ -355,8 +376,8 @@ export default function MultiSessionAttendance({
       <div className="bg-white/90 backdrop-blur-md rounded-2xl p-2 border border-slate-200/60 shadow-apple-card grid grid-cols-5 gap-2">
         {SESSIONS_DATA.map((s) => {
           const isSelected = activeSessionKey === s.key;
-          const count = roster.filter((p) => (p.attendance as any)[s.key]).length;
-          const pct = Math.round((count / totalRoster) * 100);
+          const count = roster.filter((p) => isAttendeeCheckedIn(p, s.key)).length;
+          const pct = totalRoster > 0 ? Math.round((count / totalRoster) * 100) : 0;
 
           return (
             <button
@@ -510,8 +531,8 @@ export default function MultiSessionAttendance({
         {/* Mobile View: High-Touch Cards for Door Ushers (Visible on screens < md) */}
         <div className="md:hidden divide-y divide-slate-100">
           {filteredRoster.map((p) => {
-            const isAttended = (p.attendance as any)?.[activeSessionKey];
-            const checkInTime = (p.timestamps as any)?.[activeSessionKey];
+            const isAttended = isAttendeeCheckedIn(p, activeSessionKey);
+            const checkInTime = getAttendeeCheckInTime(p, activeSessionKey);
 
             return (
               <div key={p.id} className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors">
@@ -630,7 +651,7 @@ export default function MultiSessionAttendance({
 
                     {/* 5 Sessions Toggles */}
                     {["mon_am", "mon_pm", "tue_am", "tue_pm", "wed_am"].map((sKey) => {
-                      const isAttended = (p.attendance as any)?.[sKey];
+                      const isAttended = isAttendeeCheckedIn(p, sKey);
                       const isCurrentSessionColumn = activeSessionKey === sKey;
 
                       return (

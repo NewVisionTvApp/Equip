@@ -117,9 +117,10 @@ export default function CameraScannerModal({
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      const decodeQR = typeof jsQR === "function" ? jsQR : (jsQR as any)?.default;
+      const code = decodeQR ? decodeQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "dontInvert",
-      });
+      }) : null;
 
       if (code && code.data) {
         const raw = code.data.trim();

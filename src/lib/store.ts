@@ -88,6 +88,20 @@ export interface AttendeeViewRecord extends StoredParticipant {
     tue_pm: string | null;
     wed_am: string | null;
   };
+  attendance: {
+    mon_am: boolean;
+    mon_pm: boolean;
+    tue_am: boolean;
+    tue_pm: boolean;
+    wed_am: boolean;
+  };
+  timestamps: {
+    mon_am: string | null;
+    mon_pm: string | null;
+    tue_am: string | null;
+    tue_pm: string | null;
+    wed_am: string | null;
+  };
 }
 
 const STORAGE_KEY = "equip_platform_state_v1";
@@ -479,6 +493,8 @@ export function getAttendeesForEvent(
         registeredAt: reg.registeredAt,
         sessions,
         sessionTimes,
+        attendance: sessions,
+        timestamps: sessionTimes,
       };
     })
     .filter((a): a is AttendeeViewRecord => a !== null);
