@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "build": "vite build",
     "test": "node --test tests/verification.test.ts",
     "pages:dev": "wrangler pages dev --d1 DB=equip-db --compatibility-date 2024-11-01",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply equip-db --local"
+    "db:migrate:local": "wrangler d1 migrations apply equip-db --local",
+    "db:migrate:prod": "wrangler d1 migrations apply equip-db --remote"
   },
   "dependencies": {
     "@remixicon/react": "4.9.0",
