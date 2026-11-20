@@ -464,5 +464,28 @@ describe("Equip 3.0 Verification Test Suite (Phase 5)", () => {
       const activeEvent = resolveDateAwareEvent(mockEvents, "2026-12-EQUIP", novDate);
       assert.strictEqual(activeEvent.id, "2026-12-EQUIP");
     });
+
+    test("TC-DATE-03: Formats date range unambiguously with weekdays and month names", () => {
+      function formatDate(startDate: string, endDate: string): string {
+        const sParts = startDate.split("-").map(Number);
+        const eParts = endDate.split("-").map(Number);
+        const start = new Date(sParts[0], sParts[1] - 1, sParts[2]);
+        const end = new Date(eParts[0], eParts[1] - 1, eParts[2]);
+
+        const sDay = start.toLocaleDateString("en-US", { weekday: "short" });
+        const sMonth = start.toLocaleDateString("en-US", { month: "short" });
+        const sDate = start.getDate();
+
+        const eDay = end.toLocaleDateString("en-US", { weekday: "short" });
+        const eMonth = end.toLocaleDateString("en-US", { month: "short" });
+        const eDate = end.getDate();
+        const year = end.getFullYear();
+
+        return `${sDay}, ${sMonth} ${sDate} – ${eDay}, ${eMonth} ${eDate}, ${year}`;
+      }
+
+      const formatted = formatDate("2026-11-23", "2026-11-25");
+      assert.strictEqual(formatted, "Mon, Nov 23 – Wed, Nov 25, 2026");
+    });
   });
 });

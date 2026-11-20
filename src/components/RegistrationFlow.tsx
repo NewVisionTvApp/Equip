@@ -327,7 +327,7 @@ export default function RegistrationFlow({
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse" />
           <span className="text-xs font-bold text-[#0F472A] bg-lime-100/90 border border-lime-200/60 px-2.5 py-0.5 rounded-full">
-            {displayEventMonth} 3-Day Programme
+            {displayEventDates}
           </span>
         </div>
       </header>
@@ -853,21 +853,23 @@ export default function RegistrationFlow({
                 </div>
               </div>
 
-              {/* Real Scannable QR Code */}
-              <div className="bg-white rounded-2xl p-3 flex items-center justify-between z-10 text-slate-900 shadow-md">
-                <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 rounded-xl bg-white flex items-center justify-center shrink-0 border border-slate-200 p-1 shadow-xs overflow-hidden">
-                    <QRCodeView value={confirmedPass.id} size={50} darkColor="#0F472A" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-extrabold text-slate-900">Door Usher Scannable Pass</span>
-                    <span className="text-[10px] text-slate-500">Scan at entrance for all 5 sessions</span>
-                    <span className="text-[10px] font-mono font-bold text-[#0F472A] mt-0.5">{confirmedPass.id}</span>
-                  </div>
+              {/* Real Scannable QR Code (Large & High Contrast) */}
+              <div className="bg-white rounded-2xl p-4 flex flex-col items-center justify-center z-10 text-slate-900 shadow-lg border border-slate-100">
+                <div className="bg-white p-2.5 rounded-2xl shadow-xs border border-slate-200/90 mb-2">
+                  <QRCodeView value={confirmedPass.id} size={160} darkColor="#000000" />
+                </div>
+                
+                <span className="font-mono text-xl font-black text-[#0F472A] tracking-wider">
+                  {confirmedPass.id}
+                </span>
+
+                <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-600 font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Door Usher Scannable Pass · 5 Sessions</span>
                 </div>
 
-                <span className="font-mono text-xs font-black text-[#0F472A] bg-lime-100 px-2 py-0.5 rounded-md">
-                  ACTIVE
+                <span className="text-[11px] text-slate-400 mt-0.5 font-medium">
+                  {confirmedPass.date}
                 </span>
               </div>
             </div>

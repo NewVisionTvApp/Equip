@@ -34,7 +34,7 @@ const SESSIONS_DATA = [
     key: "mon_am",
     name: "Keynote Impartation & Vision Casting",
     short: "Mon AM",
-    day: "Day 1 · Morning",
+    day: "Day 1 · Mon, Nov 23 (Morning)",
     time: "09:00 AM – 12:30 PM",
     speaker: "Apostle J. Mensah",
     hall: "Main Auditorium",
@@ -44,7 +44,7 @@ const SESSIONS_DATA = [
     key: "mon_pm",
     name: "Evening Anointing & Deliverance Plenary",
     short: "Mon PM",
-    day: "Day 1 · Evening",
+    day: "Day 1 · Mon, Nov 23 (Evening)",
     time: "05:30 PM – 08:30 PM",
     speaker: "Bishop David O.",
     hall: "Main Auditorium",
@@ -54,7 +54,7 @@ const SESSIONS_DATA = [
     key: "tue_am",
     name: "Pastoral Governance & Ministry Ethics",
     short: "Tue AM",
-    day: "Day 2 · Morning",
+    day: "Day 2 · Tue, Nov 24 (Morning)",
     time: "09:00 AM – 12:30 PM",
     speaker: "Rev. Dr. Grace E.",
     hall: "Synod Hall A",
@@ -64,7 +64,7 @@ const SESSIONS_DATA = [
     key: "tue_pm",
     name: "Signs, Wonders & Leadership Mantle",
     short: "Tue PM",
-    day: "Day 2 · Evening",
+    day: "Day 2 · Tue, Nov 24 (Evening)",
     time: "05:30 PM – 08:30 PM",
     speaker: "Pastor Samuel K.",
     hall: "Main Auditorium",
@@ -74,7 +74,7 @@ const SESSIONS_DATA = [
     key: "wed_am",
     name: "Final Mantle Impartation & Commissioning",
     short: "Wed AM",
-    day: "Day 3 · Morning",
+    day: "Day 3 · Wed, Nov 25 (Morning Finale)",
     time: "09:00 AM – 01:00 PM",
     speaker: "Presiding Apostolic Council",
     hall: "Main Auditorium",
@@ -308,13 +308,13 @@ export default function MultiSessionAttendance({
             ← Dashboard
           </button>
           <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">5-Session Attendance Desk</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Usher Mobile Desk · 5 Sessions</h1>
               <span className="text-[11px] font-extrabold bg-[#0F472A] text-[#A3E635] px-2 py-0.5 rounded-full">
-                Usher Terminal
+                Live Door Scanner
               </span>
             </div>
-            <span className="text-xs text-slate-400">Real-time door check-in & verification across all 5 programme sessions</span>
+            <span className="text-xs text-slate-500 font-medium">Mon, Nov 23 – Wed, Nov 25, 2026 · Real-time attendance verification</span>
           </div>
         </div>
 
@@ -507,7 +507,74 @@ export default function MultiSessionAttendance({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile View: High-Touch Cards for Door Ushers (Visible on screens < md) */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {filteredRoster.map((p) => {
+            const isAttended = (p.attendance as any)?.[activeSessionKey];
+            const checkInTime = (p.timestamps as any)?.[activeSessionKey];
+
+            return (
+              <div key={p.id} className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
+                      p.isOrdained ? "bg-purple-100 text-purple-900" : "bg-emerald-100 text-emerald-900"
+                    }`}
+                  >
+                    {p.fullName.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-slate-900 text-sm truncate">{p.fullName}</span>
+                      <span className="font-mono text-[10px] font-bold text-[#0F472A] bg-lime-100 px-1.5 py-0.5 rounded">
+                        {p.id}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 truncate">{p.roleOffice} · {p.churchName}</span>
+                    {checkInTime && (
+                      <span className="text-[10px] text-emerald-700 font-semibold mt-0.5">
+                        Checked in at {checkInTime}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleAttendance(p.id, activeSessionKey)}
+                    className={`h-9 px-3.5 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-xs ${
+                      isAttended
+                        ? "bg-emerald-600 text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
+                    }`}
+                  >
+                    {isAttended ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Checked In</span>
+                      </>
+                    ) : (
+                      <span>Check In</span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setBadgeParticipant(p)}
+                    className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-xl bg-slate-50 border border-slate-200 shrink-0"
+                    title="View Badge & Punch-Card"
+                  >
+                    <Printer className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop View: Full 10-Column Multi-Session Matrix (Visible on screens >= md) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200/60 text-slate-500 font-bold uppercase tracking-wider text-[10px]">

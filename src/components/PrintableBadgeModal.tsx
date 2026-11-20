@@ -93,14 +93,13 @@ export default function PrintableBadgeModal({
           </div>
 
           {/* QR Code Graphic for Usher Entrance Door Scanner */}
-          <div className="flex items-center justify-center gap-3 w-full pt-1">
-            <div className="w-16 h-16 bg-white border border-slate-300 rounded-xl p-1 flex items-center justify-center shadow-xs overflow-hidden print:border-black">
-              <QRCodeView value={participant.id} size={58} darkColor="#000000" />
+          <div className="flex flex-col items-center justify-center gap-2 w-full pt-2">
+            <div className="w-28 h-28 bg-white border-2 border-slate-300 rounded-2xl p-2 flex items-center justify-center shadow-xs overflow-hidden print:border-black">
+              <QRCodeView value={participant.id} size={96} darkColor="#000000" />
             </div>
-            <div className="text-left text-[11px] text-slate-500 flex flex-col">
-              <span className="font-bold text-slate-900">Door Usher Scanner</span>
-              <span>Valid for all 5 sessions</span>
-              <span className="text-[10px] text-slate-400">{eventName}</span>
+            <div className="text-center text-[11px] text-slate-500 flex flex-col">
+              <span className="font-bold text-slate-900">Door Usher Scannable Pass</span>
+              <span className="text-[10px] text-slate-400">Valid for all 5 sessions · {eventName}</span>
             </div>
           </div>
 

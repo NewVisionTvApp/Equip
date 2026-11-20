@@ -589,12 +589,25 @@ export default function Dashboard({
                 <span className="text-[10px] text-emerald-600 font-bold">▾ Switch</span>
               </button>
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Active Programme: <strong className="text-slate-700">{activeEventTheme}</strong>
-            </p>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap text-xs text-slate-500 font-medium">
+              <span>Theme: <strong className="text-slate-800">{activeEventTheme}</strong></span>
+              <span className="text-slate-300">·</span>
+              <span className="text-[#0F472A] font-bold bg-lime-100 border border-lime-200 px-2.5 py-0.5 rounded-md text-xs">
+                Mon, Nov 23 – Wed, Nov 25, 2026 (3 Days · 5 Sessions)
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              type="button"
+              onClick={onSessionsClick}
+              className="h-10 px-4 bg-gradient-to-r from-[#0F472A] to-[#165A36] hover:brightness-110 active:scale-[0.96] text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 shadow-apple-card transition-all duration-200 ease-apple-spring"
+            >
+              <Smartphone className="w-4 h-4 text-[#A3E635]" />
+              <span>Usher Mobile Desk</span>
+            </button>
+
             <button
               type="button"
               onClick={onOpenEventModal}

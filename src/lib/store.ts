@@ -23,6 +23,34 @@ export interface EquipEvent {
   sessions?: SessionConfig[];
 }
 
+/**
+ * Formats an event date range into an unambiguous, natural human string.
+ * e.g. "Mon, Nov 23 – Wed, Nov 25, 2026"
+ */
+export function formatEventFullDateRange(startDate?: string, endDate?: string, fallbackMonthYear?: string): string {
+  if (!startDate || !endDate) return fallbackMonthYear || "Monthly 3-Day Gathering";
+
+  try {
+    const sParts = startDate.split("-").map(Number);
+    const eParts = endDate.split("-").map(Number);
+    const start = new Date(sParts[0], sParts[1] - 1, sParts[2]);
+    const end = new Date(eParts[0], eParts[1] - 1, eParts[2]);
+
+    const sDay = start.toLocaleDateString("en-US", { weekday: "short" }); // Mon
+    const sMonth = start.toLocaleDateString("en-US", { month: "short" }); // Nov
+    const sDate = start.getDate(); // 23
+
+    const eDay = end.toLocaleDateString("en-US", { weekday: "short" }); // Wed
+    const eMonth = end.toLocaleDateString("en-US", { month: "short" }); // Nov
+    const eDate = end.getDate(); // 25
+    const year = end.getFullYear(); // 2026
+
+    return `${sDay}, ${sMonth} ${sDate} – ${eDay}, ${eMonth} ${eDate}, ${year}`;
+  } catch {
+    return fallbackMonthYear || `${startDate} – ${endDate}`;
+  }
+}
+
 export interface StoredParticipant {
   id: string; // "EQ-XXXXX"
   fullName: string;

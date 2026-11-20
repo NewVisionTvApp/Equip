@@ -4,7 +4,7 @@ import RegistrationFlow from "./components/RegistrationFlow";
 import AdminDirectory from "./components/AdminDirectory";
 import MultiSessionAttendance from "./components/MultiSessionAttendance";
 import EventModal, { EquipEvent } from "./components/EventModal";
-import { Calendar, ChevronDown, RotateCcw } from "lucide-react";
+import { Calendar, ChevronDown, RotateCcw, Smartphone } from "lucide-react";
 import {
   loadPlatformState,
   savePlatformState,
@@ -16,6 +16,7 @@ import {
   updateEventSessionRecord,
   getRegisteredChurches,
   addRegisteredChurch,
+  formatEventFullDateRange,
   SessionConfig,
 } from "./lib/store";
 
@@ -138,7 +139,9 @@ export default function App() {
           >
             <Calendar className="w-3.5 h-3.5 text-[#A3E635]" />
             <span className="font-bold text-white">{activeEvent.monthYear}</span>
-            <span className="text-[10px] text-slate-400 hidden md:inline">· {activeEvent.theme}</span>
+            <span className="text-[10px] text-emerald-300 font-mono bg-emerald-950/80 border border-emerald-800 px-1.5 py-0.5 rounded ml-0.5">
+              {formatEventFullDateRange(activeEvent.startDate, activeEvent.endDate, activeEvent.monthYear)}
+            </span>
             <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
           </button>
         </div>
@@ -171,13 +174,14 @@ export default function App() {
           <button
             type="button"
             onClick={() => setView("attendance")}
-            className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
+            className={`px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center gap-1.5 ${
               view === "attendance"
                 ? "bg-[#0F472A] text-[#A3E635]"
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            5-Session Desk
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>Usher Mobile Desk</span>
           </button>
 
           <button
@@ -255,11 +259,11 @@ export default function App() {
           activeEventId={activeEvent.id}
           activeEventMonthYear={activeEvent.monthYear}
           activeEventTheme={activeEvent.theme}
-          activeEventDates={
-            activeEvent.startDate && activeEvent.endDate
-              ? `${activeEvent.monthYear} (${activeEvent.startDate.split("-")[2]} – ${activeEvent.endDate.split("-")[2]})`
-              : activeEvent.monthYear
-          }
+          activeEventDates={formatEventFullDateRange(
+            activeEvent.startDate,
+            activeEvent.endDate,
+            activeEvent.monthYear
+          )}
           existingParticipants={platformState.participants}
           churchesList={registeredChurches}
           onAddNewChurch={handleAddNewChurch}
