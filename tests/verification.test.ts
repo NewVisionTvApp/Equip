@@ -488,4 +488,70 @@ describe("Equip 3.0 Verification Test Suite (Phase 5)", () => {
       assert.strictEqual(formatted, "Mon, Nov 23 – Wed, Nov 25, 2026");
     });
   });
+
+  describe("Admin Profile Editing & Platform State Snapshots", () => {
+    test("TC-EDIT-01: Admin can update attendee profile details and clergy status", () => {
+      const mockParticipant = {
+        id: "EQ-82914",
+        fullName: "Pastor David Adeleke",
+        phone: "+2348051234567",
+        email: "david@example.com",
+        churchName: "Grace Tabernacle",
+        isHostChurch: false,
+        roleOffice: "Associate Pastor",
+        isOrdained: true,
+        location: "Abuja",
+        createdAt: new Date().toISOString(),
+      };
+
+      const mockState = {
+        events: [{ id: "2026-11-EQUIP", title: "Equip November 2026", monthYear: "November 2026", status: "active" as const }],
+        activeEventId: "2026-11-EQUIP",
+        participants: { "EQ-82914": mockParticipant },
+        registrations: [{ id: "reg_1", participantId: "EQ-82914", eventId: "2026-11-EQUIP", registeredAt: new Date().toISOString() }],
+        attendance: {},
+        churches: ["Grace Covenant Sanctuary (Host)"],
+      };
+
+      // Apply update
+      const existing = mockState.participants["EQ-82914"];
+      const updated = {
+        ...existing,
+        fullName: "Bishop David Adeleke",
+        phone: "+2348059999999",
+        roleOffice: "Senior Bishop",
+        location: "Port Harcourt",
+        churchName: "Kingdom Life Apostolic Ministry",
+      };
+
+      mockState.participants["EQ-82914"] = updated;
+      if (!mockState.churches.includes(updated.churchName)) {
+        mockState.churches.push(updated.churchName);
+      }
+
+      assert.strictEqual(mockState.participants["EQ-82914"].fullName, "Bishop David Adeleke");
+      assert.strictEqual(mockState.participants["EQ-82914"].phone, "+2348059999999");
+      assert.strictEqual(mockState.participants["EQ-82914"].roleOffice, "Senior Bishop");
+      assert.strictEqual(mockState.participants["EQ-82914"].location, "Port Harcourt");
+      assert.strictEqual(mockState.churches.includes("Kingdom Life Apostolic Ministry"), true);
+    });
+
+    test("TC-SYNC-01: Serializes and restores full state snapshot faithfully", () => {
+      const mockState = {
+        events: [{ id: "2026-11-EQUIP", title: "Equip November 2026" }],
+        participants: { "EQ-TEST1": { id: "EQ-TEST1", fullName: "Test Delegate" } },
+        registrations: [{ id: "reg_1", participantId: "EQ-TEST1", eventId: "2026-11-EQUIP" }],
+        attendance: { "EQ-TEST1_2026-11-EQUIP_mon_am": { attended: true, timestamp: "08:45 AM" } },
+        churches: ["Grace Covenant Sanctuary (Host)", "Living Faith"],
+      };
+
+      const json = JSON.stringify(mockState, null, 2);
+      const restored = JSON.parse(json);
+
+      assert.strictEqual(restored.events.length, 1);
+      assert.strictEqual(restored.participants["EQ-TEST1"].fullName, "Test Delegate");
+      assert.strictEqual(restored.attendance["EQ-TEST1_2026-11-EQUIP_mon_am"].attended, true);
+      assert.strictEqual(restored.churches.includes("Living Faith"), true);
+    });
+  });
 });

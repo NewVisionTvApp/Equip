@@ -4,19 +4,23 @@ import RegistrationFlow from "./components/RegistrationFlow";
 import AdminDirectory from "./components/AdminDirectory";
 import MultiSessionAttendance from "./components/MultiSessionAttendance";
 import EventModal, { EquipEvent } from "./components/EventModal";
-import { Calendar, ChevronDown, RotateCcw, Smartphone } from "lucide-react";
+import { Calendar, ChevronDown, RotateCcw, Smartphone, Download, Upload } from "lucide-react";
 import {
   loadPlatformState,
   savePlatformState,
   resetPlatformState,
   getAttendeesForEvent,
   registerParticipantForEvent,
+  updateParticipantRecord,
   toggleSessionAttendanceRecord,
   updateEventRecord,
   updateEventSessionRecord,
   getRegisteredChurches,
   addRegisteredChurch,
   formatEventFullDateRange,
+  subscribeToPlatformSync,
+  exportPlatformStateJSON,
+  importPlatformStateJSON,
   SessionConfig,
 } from "./lib/store";
 
@@ -38,13 +42,22 @@ export default function App() {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [platformState, setPlatformState] = useState(() => loadPlatformState());
 
-  // Listen for browser Back / Forward buttons
+  // Listen for browser Back / Forward buttons & cross-tab / cross-device synchronization
   useEffect(() => {
     const handlePopState = () => {
       setView(getRouteFromLocation());
     };
     window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+
+    // Cross-tab real-time sync subscription
+    const unsubscribeSync = subscribeToPlatformSync(() => {
+      setPlatformState(loadPlatformState());
+    });
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      unsubscribeSync();
+    };
   }, []);
 
   // Navigate to a view and update browser URL
@@ -145,6 +158,47 @@ export default function App() {
     setPlatformState(updated);
   };
 
+  const handleUpdateParticipant = (participantId: string, updates: any) => {
+    const res = updateParticipantRecord(platformState, participantId, updates);
+    setPlatformState(res.state);
+  };
+
+  const handleExportBackup = () => {
+    const json = exportPlatformStateJSON(platformState);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `equip_database_snapshot_${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportBackup = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const content = event.target?.result as string;
+          const imported = importPlatformStateJSON(content);
+          setPlatformState(imported);
+          alert("Platform database snapshot restored successfully!");
+        } catch (err: any) {
+          alert(`Failed to restore backup: ${err.message}`);
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
   const handleResetData = () => {
     if (confirm("Reset demo data back to initial seed state with 184 registrations?")) {
       const reset = resetPlatformState();
@@ -227,6 +281,25 @@ export default function App() {
             Public Register
           </button>
 
+          {/* Backup Snapshot Export & Import Pills */}
+          <button
+            type="button"
+            onClick={handleExportBackup}
+            title="Download full JSON database snapshot backup"
+            className="p-1 text-slate-400 hover:text-[#A3E635] transition-colors ml-1"
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleImportBackup}
+            title="Restore database snapshot from JSON file"
+            className="p-1 text-slate-400 hover:text-emerald-300 transition-colors"
+          >
+            <Upload className="w-3.5 h-3.5" />
+          </button>
+
           {/* Reset Demo Data Pill */}
           <button
             type="button"
@@ -266,6 +339,7 @@ export default function App() {
           attendeesData={activeAttendees}
           sessionsData={activeEvent.sessions}
           onToggleSession={handleToggleAttendance}
+          onUpdateParticipant={handleUpdateParticipant}
         />
       )}
 

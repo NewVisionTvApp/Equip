@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Search,
   CheckCircle2,
@@ -10,9 +10,11 @@ import {
   Plus,
   Pencil,
   Camera,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { SEED_PARTICIPANTS } from "@/db/seed-data";
-import { SessionConfig } from "@/lib/store";
+import { SessionConfig, isAudioMuted, setAudioMuted } from "@/lib/store";
 import PrintableBadgeModal from "./PrintableBadgeModal";
 import EditSessionModal from "./EditSessionModal";
 import CameraScannerModal from "./CameraScannerModal";
@@ -99,6 +101,8 @@ export default function MultiSessionAttendance({
   const [badgeParticipant, setBadgeParticipant] = useState<any | null>(null);
   const [editingSession, setEditingSession] = useState<SessionConfig | null>(null);
   const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
+  const [isMuted, setIsMuted] = useState(() => isAudioMuted());
+  const [attendanceFilter, setAttendanceFilter] = useState<"all" | "checked_in" | "absent">("all");
 
   // Attendees with session attendance map (using rosterData if provided, or default seeds)
   const [internalRoster, setInternalRoster] = useState(() =>
@@ -131,6 +135,12 @@ export default function MultiSessionAttendance({
     })
   );
 
+  useEffect(() => {
+    if (rosterData && rosterData.length > 0) {
+      setInternalRoster(rosterData);
+    }
+  }, [rosterData]);
+
   const roster = rosterData || internalRoster;
 
   const sessions = useMemo(() => {
@@ -148,8 +158,15 @@ export default function MultiSessionAttendance({
     [sessions, activeSessionKey]
   );
 
-  // Audio feedback
+  const toggleMute = () => {
+    const next = !isMuted;
+    setIsMuted(next);
+    setAudioMuted(next);
+  };
+
+  // Audio feedback (plays unless muted by user)
   const playHapticAudio = () => {
+    if (isMuted) return;
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const osc = audioCtx.createOscillator();
@@ -262,9 +279,21 @@ export default function MultiSessionAttendance({
     verifyAttendee(fastScanInput);
   };
 
-  // Filtered attendees
+  // Session Statistics
+  const checkedInThisSession = roster.filter((p) => isAttendeeCheckedIn(p, activeSessionKey)).length;
+  const totalRoster = roster.length || 184;
+  const absentThisSession = Math.max(0, totalRoster - checkedInThisSession);
+  const attendanceRate = totalRoster > 0 ? Math.round((checkedInThisSession / totalRoster) * 100) : 0;
+  const clergyCheckedIn = roster.filter((p) => p.isOrdained && isAttendeeCheckedIn(p, activeSessionKey)).length;
+  const delegatesCheckedIn = checkedInThisSession - clergyCheckedIn;
+
+  // Filtered attendees (combining search query and door attendance filter)
   const filteredRoster = useMemo(() => {
     return roster.filter((p) => {
+      const isAttended = isAttendeeCheckedIn(p, activeSessionKey);
+      if (attendanceFilter === "checked_in" && !isAttended) return false;
+      if (attendanceFilter === "absent" && isAttended) return false;
+
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return (
@@ -275,14 +304,7 @@ export default function MultiSessionAttendance({
         p.roleOffice.toLowerCase().includes(q)
       );
     });
-  }, [roster, searchQuery]);
-
-  // Session Statistics
-  const checkedInThisSession = roster.filter((p) => isAttendeeCheckedIn(p, activeSessionKey)).length;
-  const totalRoster = roster.length || 184;
-  const attendanceRate = totalRoster > 0 ? Math.round((checkedInThisSession / totalRoster) * 100) : 0;
-  const clergyCheckedIn = roster.filter((p) => p.isOrdained && isAttendeeCheckedIn(p, activeSessionKey)).length;
-  const delegatesCheckedIn = checkedInThisSession - clergyCheckedIn;
+  }, [roster, searchQuery, activeSessionKey, attendanceFilter]);
 
   // Export Session CSV
   const handleExportSessionCSV = () => {
@@ -359,6 +381,20 @@ export default function MultiSessionAttendance({
           >
             <Users className="w-3.5 h-3.5" />
             <span>Participant Directory</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleMute}
+            className={`h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 border shadow-2xs ${
+              isMuted
+                ? "bg-amber-50 text-amber-900 border-amber-300"
+                : "bg-slate-100 hover:bg-slate-200/80 text-slate-700 border-slate-200"
+            }`}
+            title={isMuted ? "Audio is MUTED (Silent scanning during prayer/sermon)" : "Audio chime is ON"}
+          >
+            {isMuted ? <VolumeX className="w-3.5 h-3.5 text-amber-600" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-600" />}
+            <span className="hidden sm:inline">{isMuted ? "Silent Mode" : "Sound On"}</span>
           </button>
 
           <button
@@ -510,8 +546,8 @@ export default function MultiSessionAttendance({
 
       {/* Multi-Session Attendance Roster Table */}
       <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/60 shadow-apple-card overflow-hidden">
-        {/* Table Search Bar */}
-        <div className="p-4 border-b border-slate-200/60 flex items-center justify-between gap-4">
+        {/* Table Search Bar & Door Attendance Filter Tabs */}
+        <div className="p-4 border-b border-slate-200/60 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -523,8 +559,33 @@ export default function MultiSessionAttendance({
             />
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-            <span>Showing {filteredRoster.length} Attendees</span>
+          {/* Door Usher Filter Segmented Control */}
+          <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+            {[
+              { key: "all", label: `All (${totalRoster})` },
+              { key: "checked_in", label: `Checked In (${checkedInThisSession})` },
+              { key: "absent", label: `Not Yet Arrived (${absentThisSession})` },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => {
+                  playHapticAudio();
+                  setAttendanceFilter(tab.key as any);
+                }}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all text-xs shrink-0 active:scale-95 ${
+                  attendanceFilter === tab.key
+                    ? "bg-[#0F472A] text-white shadow-xs"
+                    : "bg-slate-100 hover:bg-slate-200/70 text-slate-600"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-500">
+            <span>Showing {filteredRoster.length}</span>
           </div>
         </div>
 
@@ -716,6 +777,8 @@ export default function MultiSessionAttendance({
         onClose={() => setIsCameraScannerOpen(false)}
         onScan={(id) => verifyAttendee(id)}
         activeSessionName={`${activeSession.short} · ${activeSession.name}`}
+        isMuted={isMuted}
+        onToggleMute={toggleMute}
       />
     </div>
   );

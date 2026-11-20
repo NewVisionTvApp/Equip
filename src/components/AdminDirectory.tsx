@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Search,
   Download,
@@ -9,6 +9,8 @@ import {
   Copy,
   Check,
   Printer,
+  Pencil,
+  Save,
 } from "lucide-react";
 import { SEED_PARTICIPANTS } from "@/db/seed-data";
 import { SessionConfig } from "@/lib/store";
@@ -22,6 +24,7 @@ interface AdminDirectoryProps {
   attendeesData?: any[];
   sessionsData?: SessionConfig[];
   onToggleSession?: (participantId: string, sessionKey: string) => void;
+  onUpdateParticipant?: (participantId: string, updates: any) => void;
 }
 
 export default function AdminDirectory({
@@ -32,12 +35,16 @@ export default function AdminDirectory({
   attendeesData,
   sessionsData,
   onToggleSession,
+  onUpdateParticipant,
 }: AdminDirectoryProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "pastors" | "members" | "host" | "visiting">("all");
   const [selectedParticipant, setSelectedParticipant] = useState<any | null>(null);
   const [badgeParticipant, setBadgeParticipant] = useState<any | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<any>({});
+  const [saveAlert, setSaveAlert] = useState<string | null>(null);
 
   // Expanded attendees with 5-session attendance simulation
   const [directoryData, setDirectoryData] = useState(() =>
@@ -70,7 +77,20 @@ export default function AdminDirectory({
     })
   );
 
+  useEffect(() => {
+    if (attendeesData && attendeesData.length > 0) {
+      setDirectoryData(attendeesData);
+    }
+  }, [attendeesData]);
+
   const dataSource = attendeesData || directoryData;
+
+  // Dynamic counts for filter pills
+  const allCount = dataSource.length;
+  const pastorsCount = useMemo(() => dataSource.filter((p) => p.isOrdained).length, [dataSource]);
+  const membersCount = allCount - pastorsCount;
+  const hostCount = useMemo(() => dataSource.filter((p) => p.isHostChurch).length, [dataSource]);
+  const visitingCount = allCount - hostCount;
 
   // Filter logic
   const filteredData = useMemo(() => {
@@ -92,7 +112,7 @@ export default function AdminDirectory({
         p.email.toLowerCase().includes(q)
       );
     });
-  }, [directoryData, roleFilter, searchQuery]);
+  }, [dataSource, roleFilter, searchQuery]);
 
   // Audio feedback
   const playHapticAudio = () => {
@@ -118,6 +138,42 @@ export default function AdminDirectory({
     navigator.clipboard.writeText(id);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleStartEdit = () => {
+    if (!selectedParticipant) return;
+    setEditForm({
+      fullName: selectedParticipant.fullName || "",
+      phone: selectedParticipant.phone || "",
+      email: selectedParticipant.email || "",
+      churchName: selectedParticipant.churchName || "",
+      roleOffice: selectedParticipant.roleOffice || "",
+      location: selectedParticipant.location || "",
+      isOrdained: selectedParticipant.isOrdained ?? false,
+    });
+    setIsEditing(true);
+  };
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedParticipant) return;
+
+    playHapticAudio();
+    if (onUpdateParticipant) {
+      onUpdateParticipant(selectedParticipant.id, editForm);
+    }
+
+    const updated = {
+      ...selectedParticipant,
+      ...editForm,
+    };
+    setSelectedParticipant(updated);
+    setDirectoryData((prev) =>
+      prev.map((p) => (p.id === selectedParticipant.id ? updated : p))
+    );
+    setIsEditing(false);
+    setSaveAlert("Attendee profile updated successfully!");
+    setTimeout(() => setSaveAlert(null), 3000);
   };
 
   // Toggle individual session for selected participant
@@ -180,21 +236,24 @@ export default function AdminDirectory({
       "Wed AM Checked In",
     ];
 
-    const rows = filteredData.map((p) => [
-      p.id,
-      `"${p.fullName}"`,
-      p.phone,
-      p.email,
-      `"${p.churchName}"`,
-      p.isHostChurch ? "Yes" : "No",
-      p.roleOffice,
-      `"${p.location}"`,
-      p.sessions.mon_am ? "Yes" : "No",
-      p.sessions.mon_pm ? "Yes" : "No",
-      p.sessions.tue_am ? "Yes" : "No",
-      p.sessions.tue_pm ? "Yes" : "No",
-      p.sessions.wed_am ? "Yes" : "No",
-    ]);
+    const rows = filteredData.map((p) => {
+      const sess = p.sessions || p.attendance || {};
+      return [
+        p.id,
+        `"${p.fullName}"`,
+        p.phone,
+        p.email,
+        `"${p.churchName}"`,
+        p.isHostChurch ? "Yes" : "No",
+        p.roleOffice,
+        `"${p.location}"`,
+        sess.mon_am ? "Yes" : "No",
+        sess.mon_pm ? "Yes" : "No",
+        sess.tue_am ? "Yes" : "No",
+        sess.tue_pm ? "Yes" : "No",
+        sess.wed_am ? "Yes" : "No",
+      ];
+    });
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
@@ -279,11 +338,11 @@ export default function AdminDirectory({
         {/* Role & Affiliation Filters (Apple Pill Segmented Control) */}
         <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 text-xs">
           {[
-            { key: "all", label: "All (184)" },
-            { key: "pastors", label: "Ordained Pastors (72)" },
-            { key: "members", label: "Members & Workers (112)" },
-            { key: "host", label: "Host Church (68)" },
-            { key: "visiting", label: "Visiting Delegations (116)" },
+            { key: "all", label: `All (${allCount})` },
+            { key: "pastors", label: `Ordained Pastors (${pastorsCount})` },
+            { key: "members", label: `Members & Workers (${membersCount})` },
+            { key: "host", label: `Host Church (${hostCount})` },
+            { key: "visiting", label: `Visiting Delegations (${visitingCount})` },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -451,99 +510,238 @@ export default function AdminDirectory({
             </button>
 
             {/* Profile Header */}
-            <div className="flex items-center gap-4">
-              <div
-                className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg ${
-                  selectedParticipant.isOrdained
-                    ? "bg-purple-100 text-purple-900 border border-purple-200"
-                    : "bg-emerald-100 text-emerald-900 border border-emerald-200"
-                }`}
-              >
-                {selectedParticipant.fullName.slice(0, 2).toUpperCase()}
-              </div>
-
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-extrabold text-slate-900">{selectedParticipant.fullName}</h3>
-                  {selectedParticipant.isOrdained && (
-                    <span className="text-[10px] font-extrabold bg-[#0F472A] text-[#A3E635] px-2 py-0.5 rounded-full uppercase">
-                      Clergy VIP
-                    </span>
-                  )}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-4 min-w-0">
+                <div
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 ${
+                    selectedParticipant.isOrdained
+                      ? "bg-purple-100 text-purple-900 border border-purple-200"
+                      : "bg-emerald-100 text-emerald-900 border border-emerald-200"
+                  }`}
+                >
+                  {selectedParticipant.fullName.slice(0, 2).toUpperCase()}
                 </div>
-                <span className="text-xs text-slate-500">
-                  {selectedParticipant.roleOffice} · {selectedParticipant.churchName}
-                </span>
-                <span className="text-[11px] text-slate-400 mt-0.5">{selectedParticipant.location}</span>
-              </div>
-            </div>
 
-            {/* Unique ID Box */}
-            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between">
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-bold text-slate-400">Unique Participant ID</span>
-                <span className="font-mono text-xl font-black text-[#0F472A]">{selectedParticipant.id}</span>
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-extrabold text-slate-900 truncate">{selectedParticipant.fullName}</h3>
+                    {selectedParticipant.isOrdained && (
+                      <span className="text-[10px] font-extrabold bg-[#0F472A] text-[#A3E635] px-2 py-0.5 rounded-full uppercase shrink-0">
+                        Clergy VIP
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-slate-500 truncate">
+                    {selectedParticipant.roleOffice} · {selectedParticipant.churchName}
+                  </span>
+                  <span className="text-[11px] text-slate-400 mt-0.5 truncate">{selectedParticipant.location}</span>
+                </div>
               </div>
 
               <button
                 type="button"
-                onClick={() => handleCopy(selectedParticipant.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs active:scale-95 transition-all"
+                onClick={() => {
+                  if (isEditing) {
+                    setIsEditing(false);
+                  } else {
+                    handleStartEdit();
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 border shrink-0 ${
+                  isEditing
+                    ? "bg-slate-100 text-slate-700 border-slate-300"
+                    : "bg-emerald-50 text-[#0F472A] hover:bg-emerald-100 border-emerald-200"
+                }`}
+                title={isEditing ? "Cancel editing" : "Edit attendee profile details"}
               >
-                {copiedId === selectedParticipant.id ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                ) : (
-                  <Copy className="w-3.5 h-3.5" />
-                )}
-                <span>{copiedId === selectedParticipant.id ? "Copied" : "Copy ID"}</span>
+                <Pencil className="w-3.5 h-3.5" />
+                <span>{isEditing ? "Cancel" : "Edit Details"}</span>
               </button>
             </div>
 
-            {/* 5-Session Attendance Interactive Matrix for this Attendee */}
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-extrabold text-slate-900">5-Session Programme Attendance</span>
-              <div className="flex flex-col gap-2">
-                {(sessionsData && sessionsData.length > 0
-                  ? sessionsData.map((s, idx) => ({
-                      key: s.key,
-                      name: `Session ${idx + 1}: ${s.short} (${s.name}) · Preacher: ${s.speaker}`,
-                    }))
-                  : [
-                      { key: "mon_am", name: "Session 1: Monday Morning" },
-                      { key: "mon_pm", name: "Session 2: Monday Evening" },
-                      { key: "tue_am", name: "Session 3: Tuesday Morning" },
-                      { key: "tue_pm", name: "Session 4: Tuesday Evening" },
-                      { key: "wed_am", name: "Session 5: Wednesday Morning" },
-                    ]
-                ).map((s) => {
-                  const isChecked = (selectedParticipant.sessions as any)[s.key];
-                  const time = (selectedParticipant.sessionTimes as any)[s.key];
-                  return (
-                    <div
-                      key={s.key}
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/60 text-xs"
-                    >
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-slate-800">{s.name}</span>
-                        {time && <span className="text-[10px] text-emerald-700 font-medium">Checked in at {time}</span>}
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => toggleSessionForParticipant(selectedParticipant.id, s.key)}
-                        className={`px-3 py-1 rounded-full font-bold text-xs transition-all active:scale-95 ${
-                          isChecked
-                            ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                            : "bg-slate-200/70 text-slate-600 hover:bg-slate-300/60"
-                        }`}
-                      >
-                        {isChecked ? "Attended" : "Mark Present"}
-                      </button>
-                    </div>
-                  );
-                })}
+            {/* Save Notification Alert */}
+            {saveAlert && (
+              <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2 animate-in fade-in">
+                <Check className="w-4 h-4 text-emerald-600" />
+                <span>{saveAlert}</span>
               </div>
-            </div>
+            )}
+
+            {/* Profile Drawer Body: Edit Form vs View Mode */}
+            {isEditing ? (
+              <form onSubmit={handleSaveProfile} className="flex flex-col gap-3.5 bg-slate-50/80 p-4 rounded-2xl border border-slate-200 text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                  <span className="font-extrabold text-slate-900 text-sm">Edit Attendee Details</span>
+                  <span className="font-mono text-xs text-[#0F472A] bg-lime-100 border border-lime-200 px-2 py-0.5 rounded font-bold">
+                    {selectedParticipant.id}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="font-bold text-slate-700 text-[11px]">Full Name (with Title)</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.fullName || ""}
+                    onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                    className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="flex flex-col gap-1">
+                    <label className="font-bold text-slate-700 text-[11px]">Phone / WhatsApp</label>
+                    <input
+                      type="tel"
+                      required
+                      value={editForm.phone || ""}
+                      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                      className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="font-bold text-slate-700 text-[11px]">Email Address</label>
+                    <input
+                      type="email"
+                      value={editForm.email || ""}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                      className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="font-bold text-slate-700 text-[11px]">Affiliated Church / Ministry</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.churchName || ""}
+                    onChange={(e) => setEditForm({ ...editForm, churchName: e.target.value })}
+                    className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="flex flex-col gap-1">
+                    <label className="font-bold text-slate-700 text-[11px]">Role / Office</label>
+                    <input
+                      type="text"
+                      required
+                      value={editForm.roleOffice || ""}
+                      onChange={(e) => setEditForm({ ...editForm, roleOffice: e.target.value })}
+                      className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="font-bold text-slate-700 text-[11px]">Branch / Location</label>
+                    <input
+                      type="text"
+                      value={editForm.location || ""}
+                      onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                      className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+                    />
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 mt-1 cursor-pointer select-none bg-white p-2.5 rounded-xl border border-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editForm.isOrdained)}
+                    onChange={(e) => setEditForm({ ...editForm, isOrdained: e.target.checked })}
+                    className="w-4 h-4 rounded text-[#0F472A] focus:ring-[#0F472A]"
+                  />
+                  <span className="font-bold text-slate-700 text-xs">Ordained Minister / Pastor (Clergy VIP)</span>
+                </label>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="h-9 px-3.5 rounded-xl bg-slate-200/80 hover:bg-slate-300 text-slate-700 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="h-9 px-4 rounded-xl bg-[#0F472A] hover:bg-[#165A36] text-white font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>Save Changes</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <>
+                {/* Unique ID Box */}
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase font-bold text-slate-400">Unique Participant ID</span>
+                    <span className="font-mono text-xl font-black text-[#0F472A]">{selectedParticipant.id}</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(selectedParticipant.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs active:scale-95 transition-all"
+                  >
+                    {copiedId === selectedParticipant.id ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    <span>{copiedId === selectedParticipant.id ? "Copied" : "Copy ID"}</span>
+                  </button>
+                </div>
+
+                {/* 5-Session Attendance Interactive Matrix for this Attendee */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-extrabold text-slate-900">5-Session Programme Attendance</span>
+                  <div className="flex flex-col gap-2">
+                    {(sessionsData && sessionsData.length > 0
+                      ? sessionsData.map((s, idx) => ({
+                          key: s.key,
+                          name: `Session ${idx + 1}: ${s.short} (${s.name}) · Preacher: ${s.speaker}`,
+                        }))
+                      : [
+                          { key: "mon_am", name: "Session 1: Monday Morning" },
+                          { key: "mon_pm", name: "Session 2: Monday Evening" },
+                          { key: "tue_am", name: "Session 3: Tuesday Morning" },
+                          { key: "tue_pm", name: "Session 4: Tuesday Evening" },
+                          { key: "wed_am", name: "Session 5: Wednesday Morning" },
+                        ]
+                    ).map((s) => {
+                      const isChecked = (selectedParticipant.sessions as any)[s.key];
+                      const time = (selectedParticipant.sessionTimes as any)[s.key];
+                      return (
+                        <div
+                          key={s.key}
+                          className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/60 text-xs"
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-slate-800">{s.name}</span>
+                            {time && <span className="text-[10px] text-emerald-700 font-medium">Checked in at {time}</span>}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => toggleSessionForParticipant(selectedParticipant.id, s.key)}
+                            className={`px-3 py-1 rounded-full font-bold text-xs transition-all active:scale-95 ${
+                              isChecked
+                                ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                : "bg-slate-200/70 text-slate-600 hover:bg-slate-300/60"
+                            }`}
+                          >
+                            {isChecked ? "Attended" : "Mark Present"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Footer Buttons */}
             <div className="flex items-center gap-3 pt-2">

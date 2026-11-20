@@ -26,7 +26,7 @@ import {
   Camera,
 } from "lucide-react";
 import { SEED_PARTICIPANTS } from "@/db/seed-data";
-import { SessionConfig } from "@/lib/store";
+import { SessionConfig, isAudioMuted, setAudioMuted } from "@/lib/store";
 import EditSessionModal from "./EditSessionModal";
 import CameraScannerModal from "./CameraScannerModal";
 
@@ -143,6 +143,13 @@ export default function Dashboard({
   const [recentlyToggledId, setRecentlyToggledId] = useState<string | null>(null);
   const [editingSession, setEditingSession] = useState<SessionConfig | null>(null);
   const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
+  const [isMuted, setIsMuted] = useState(() => isAudioMuted());
+
+  const toggleMute = () => {
+    const next = !isMuted;
+    setIsMuted(next);
+    setAudioMuted(next);
+  };
 
   // Attendees State with initial realistic statuses (using attendeesData when available)
   const [attendees, setAttendees] = useState(() =>
@@ -164,6 +171,16 @@ export default function Dashboard({
             p.roleOffice.toLowerCase().includes("apostle"),
         }))
   );
+
+  useEffect(() => {
+    if (attendeesData && attendeesData.length > 0) {
+      setAttendees(attendeesData.map((a, idx) => ({
+        ...a,
+        checkedIn: a.checkedIn ?? (a.sessions?.mon_pm || idx < 7),
+        checkedInAt: a.checkedInAt ?? a.sessionTimes?.mon_pm ?? (idx < 7 ? `08:${40 + (idx * 3)} AM` : null),
+      })));
+    }
+  }, [attendeesData]);
 
   // Active Session Object (dynamically reflects admin configured preachers & topics)
   const sessionList = useMemo(() => {
@@ -225,6 +242,7 @@ export default function Dashboard({
 
   // Subtle Apple Audio feedback (synthesized lightweight pop)
   const playHapticAudio = () => {
+    if (isMuted) return;
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const osc = audioCtx.createOscillator();
@@ -1157,6 +1175,8 @@ export default function Dashboard({
         onClose={() => setIsCameraScannerOpen(false)}
         onScan={(id) => verifyDashboardAttendee(id)}
         activeSessionName={`${activeEventMonthYear} · Fast Verification`}
+        isMuted={isMuted}
+        onToggleMute={toggleMute}
       />
     </div>
   );

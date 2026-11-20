@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
-import { Camera, X, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { Camera, X, CheckCircle2, AlertCircle, RefreshCw, Volume2, VolumeX } from "lucide-react";
 
 interface CameraScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onScan: (scannedId: string) => void;
   activeSessionName?: string;
+  isMuted?: boolean;
+  onToggleMute?: () => void;
 }
 
 export default function CameraScannerModal({
@@ -14,6 +16,8 @@ export default function CameraScannerModal({
   onClose,
   onScan,
   activeSessionName,
+  isMuted,
+  onToggleMute,
 }: CameraScannerModalProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -24,8 +28,9 @@ export default function CameraScannerModal({
   const [lastScanned, setLastScanned] = useState<{ id: string; time: string } | null>(null);
   const [isScanning, setIsScanning] = useState<boolean>(true);
 
-  // Play audio chime on successful scan
+  // Play audio chime on successful scan (unless muted)
   const playScanBeep = () => {
+    if (isMuted) return;
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const osc = audioCtx.createOscillator();
@@ -171,13 +176,28 @@ export default function CameraScannerModal({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onToggleMute && (
+              <button
+                type="button"
+                onClick={onToggleMute}
+                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                  isMuted ? "bg-amber-950 text-amber-400" : "bg-slate-800 text-slate-300 hover:text-white"
+                }`}
+                title={isMuted ? "Chime is MUTED (Silent mode)" : "Chime is ON"}
+              >
+                {isMuted ? <VolumeX className="w-4 h-4 text-amber-400" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Viewfinder Viewport */}

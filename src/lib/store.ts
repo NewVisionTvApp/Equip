@@ -442,11 +442,115 @@ export function loadPlatformState(): PlatformState {
   }
 }
 
-// Save state to localStorage
+const SYNC_CHANNEL_NAME = "equip_platform_sync_v1";
+let broadcastChannel: BroadcastChannel | null = null;
+if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+  try {
+    broadcastChannel = new BroadcastChannel(SYNC_CHANNEL_NAME);
+  } catch {
+    // BroadcastChannel unsupported or blocked
+  }
+}
+
+export function broadcastPlatformChange(type: string = "sync"): void {
+  if (broadcastChannel) {
+    try {
+      broadcastChannel.postMessage({ type, timestamp: Date.now() });
+    } catch {
+      // Ignore broadcast errors
+    }
+  }
+}
+
+export function subscribeToPlatformSync(callback: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+
+  const handleStorage = (e: StorageEvent) => {
+    if (e.key === STORAGE_KEY) {
+      callback();
+    }
+  };
+
+  const handleBroadcast = () => {
+    callback();
+  };
+
+  window.addEventListener("storage", handleStorage);
+  if (broadcastChannel) {
+    broadcastChannel.addEventListener("message", handleBroadcast);
+  }
+
+  // Periodic LAN sync pull (checks server state every 5 seconds for multi-device usher synchronization)
+  let pollTimer: any = null;
+  if (typeof fetch === "function") {
+    pollTimer = setInterval(async () => {
+      try {
+        const res = await fetch("/api/sync");
+        if (res.ok) {
+          const serverData = (await res.json()) as any;
+          if (serverData && serverData.participants && serverData.events) {
+            const currentRaw = localStorage.getItem(STORAGE_KEY);
+            const serverRaw = JSON.stringify(serverData);
+            if (currentRaw !== serverRaw) {
+              localStorage.setItem(STORAGE_KEY, serverRaw);
+              callback();
+            }
+          }
+        }
+      } catch {
+        // Offline / server unreachable
+      }
+    }, 5000);
+  }
+
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+    if (broadcastChannel) {
+      broadcastChannel.removeEventListener("message", handleBroadcast);
+    }
+    if (pollTimer) {
+      clearInterval(pollTimer);
+    }
+  };
+}
+
+// Audio Mute setting persistence
+export function isAudioMuted(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem("equip_audio_muted") === "true";
+  } catch {
+    return false;
+  }
+}
+
+export function setAudioMuted(muted: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("equip_audio_muted", String(muted));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+// Save state to localStorage, broadcast across tabs & sync to LAN endpoint
 export function savePlatformState(state: PlatformState): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const raw = JSON.stringify(state);
+    localStorage.setItem(STORAGE_KEY, raw);
+    broadcastPlatformChange("state_updated");
+
+    // Async push to multi-device sync endpoint if reachable
+    if (typeof fetch === "function") {
+      fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: raw,
+      }).catch(() => {
+        // Silently ignore if offline
+      });
+    }
   } catch {
     // Ignore quota issues
   }
@@ -740,4 +844,75 @@ export function updateEventSessionRecord(
 
   savePlatformState(newState);
   return newState;
+}
+
+// Helper: Update an existing participant's profile details (Name, Phone, Email, Church, Role, Location)
+export function updateParticipantRecord(
+  state: PlatformState,
+  participantId: string,
+  updates: Partial<Omit<StoredParticipant, "id" | "createdAt">>
+): { state: PlatformState; participant: StoredParticipant | null } {
+  const existing = state.participants[participantId];
+  if (!existing) return { state, participant: null };
+
+  const roleOfficeVal = updates.roleOffice !== undefined ? updates.roleOffice.trim() : existing.roleOffice;
+  const isOrdained =
+    updates.isOrdained !== undefined
+      ? updates.isOrdained
+      : roleOfficeVal.toLowerCase().includes("pastor") ||
+        roleOfficeVal.toLowerCase().includes("bishop") ||
+        roleOfficeVal.toLowerCase().includes("reverend") ||
+        roleOfficeVal.toLowerCase().includes("minister") ||
+        roleOfficeVal.toLowerCase().includes("apostle");
+
+  const churchNameVal = updates.churchName !== undefined ? updates.churchName.trim() : existing.churchName;
+  const isHostChurch =
+    updates.isHostChurch !== undefined
+      ? updates.isHostChurch
+      : churchNameVal.includes("Host") || churchNameVal.includes("Grace Covenant");
+
+  const updated: StoredParticipant = {
+    ...existing,
+    ...updates,
+    roleOffice: roleOfficeVal,
+    churchName: churchNameVal,
+    isOrdained,
+    isHostChurch,
+  };
+
+  const updatedParticipants = {
+    ...state.participants,
+    [participantId]: updated,
+  };
+
+  // If a new church was entered, register it
+  let updatedChurches = state.churches ? [...state.churches] : [];
+  if (churchNameVal && !updatedChurches.includes(churchNameVal)) {
+    updatedChurches.push(churchNameVal);
+    updatedChurches.sort();
+  }
+
+  const updatedState: PlatformState = {
+    ...state,
+    participants: updatedParticipants,
+    churches: updatedChurches,
+  };
+
+  savePlatformState(updatedState);
+  return { state: updatedState, participant: updated };
+}
+
+// Helper: Export full platform database snapshot as JSON string
+export function exportPlatformStateJSON(state: PlatformState): string {
+  return JSON.stringify(state, null, 2);
+}
+
+// Helper: Import full platform database snapshot from JSON string
+export function importPlatformStateJSON(jsonString: string): PlatformState {
+  const parsed = JSON.parse(jsonString) as PlatformState;
+  if (!parsed || !parsed.participants || !parsed.events) {
+    throw new Error("Invalid platform state file format.");
+  }
+  savePlatformState(parsed);
+  return parsed;
 }
