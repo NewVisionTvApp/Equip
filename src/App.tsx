@@ -14,6 +14,8 @@ import {
   toggleSessionAttendanceRecord,
   updateEventRecord,
   updateEventSessionRecord,
+  getRegisteredChurches,
+  addRegisteredChurch,
   SessionConfig,
 } from "./lib/store";
 
@@ -31,6 +33,12 @@ export default function App() {
   const activeAttendees = useMemo(
     () => getAttendeesForEvent(platformState, activeEvent.id),
     [platformState, activeEvent.id]
+  );
+
+  // Registered churches list
+  const registeredChurches = useMemo(
+    () => getRegisteredChurches(platformState),
+    [platformState]
   );
 
   const ordainedCount = useMemo(
@@ -88,6 +96,11 @@ export default function App() {
       eventId: activeEvent.id,
     });
     setPlatformState(res.state);
+  };
+
+  const handleAddNewChurch = (churchName: string) => {
+    const updated = addRegisteredChurch(platformState, churchName);
+    setPlatformState(updated);
   };
 
   const handleToggleAttendance = (participantId: string, sessionKey: string) => {
@@ -241,6 +254,8 @@ export default function App() {
           activeEventName={activeEvent.title}
           activeEventId={activeEvent.id}
           existingParticipants={platformState.participants}
+          churchesList={registeredChurches}
+          onAddNewChurch={handleAddNewChurch}
           onParticipantRegistered={handleRegisterParticipant}
         />
       )}

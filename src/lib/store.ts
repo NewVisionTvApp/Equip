@@ -70,6 +70,7 @@ interface PlatformState {
   participants: Record<string, StoredParticipant>; // keyed by participant ID
   registrations: StoredRegistration[];
   attendance: Record<string, { attended: boolean; timestamp: string | null }>; // key: `${participantId}_${eventId}_${sessionKey}`
+  churches?: string[];
 }
 
 export function createDefaultSessions(): SessionConfig[] {
@@ -276,12 +277,24 @@ function getInitialState(): PlatformState {
     });
   });
 
+  const churches = Array.from(
+    new Set([
+      "Grace Covenant Sanctuary (Host)",
+      "Faith Apostolic Church",
+      "Living Streams Assembly",
+      "Redeemed Glory Center",
+      "Christ Ambassadors Fellowship",
+      ...SEED_PARTICIPANTS.map((p) => p.churchName),
+    ])
+  ).sort();
+
   return {
     events: initialEvents,
     activeEventId: "2026-12-EQUIP",
     participants,
     registrations,
     attendance,
+    churches,
   };
 }
 
@@ -453,10 +466,19 @@ export function registerParticipantForEvent(
     updatedRegistrations.push(registration);
   }
 
+  // Ensure new church is stored in churches database
+  const churchNameTrimmed = participant.churchName.trim();
+  let updatedChurches = state.churches ? [...state.churches] : [];
+  if (churchNameTrimmed && !updatedChurches.includes(churchNameTrimmed)) {
+    updatedChurches.push(churchNameTrimmed);
+    updatedChurches.sort();
+  }
+
   const newState: PlatformState = {
     ...state,
     participants: updatedParticipants,
     registrations: updatedRegistrations,
+    churches: updatedChurches,
   };
 
   savePlatformState(newState);
@@ -468,6 +490,38 @@ export function registerParticipantForEvent(
     isExistingParticipant,
     isAlreadyRegisteredForEvent,
   };
+}
+
+// Helper: Get all registered churches
+export function getRegisteredChurches(state: PlatformState): string[] {
+  const fromState = state.churches || [];
+  const fromParticipants = Object.values(state.participants).map((p) => p.churchName);
+  return Array.from(
+    new Set(["Grace Covenant Sanctuary (Host)", ...fromState, ...fromParticipants])
+  )
+    .filter((c) => c && c.trim().length > 0)
+    .sort();
+}
+
+// Helper: Add a new church to the database
+export function addRegisteredChurch(
+  state: PlatformState,
+  churchName: string
+): PlatformState {
+  const trimmed = churchName.trim();
+  if (!trimmed) return state;
+
+  const current = state.churches ? [...state.churches] : [];
+  if (current.includes(trimmed)) return state;
+
+  const updated = [...current, trimmed].sort();
+  const newState: PlatformState = {
+    ...state,
+    churches: updated,
+  };
+
+  savePlatformState(newState);
+  return newState;
 }
 
 // Helper: Toggle Attendance

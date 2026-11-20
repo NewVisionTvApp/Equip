@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   QrCode,
   CheckCircle2,
@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Search,
   Printer,
+  Plus,
 } from "lucide-react";
 import { generateParticipantId } from "@/lib/id-generator";
 import { authClient } from "@/lib/auth-client";
@@ -30,6 +31,8 @@ interface RegistrationFlowProps {
   activeEventName?: string;
   activeEventId?: string;
   existingParticipants?: Record<string, any>;
+  churchesList?: string[];
+  onAddNewChurch?: (churchName: string) => void;
 }
 
 export default function RegistrationFlow({
@@ -37,10 +40,37 @@ export default function RegistrationFlow({
   onParticipantRegistered,
   activeEventName = "Equip December 2026",
   existingParticipants,
+  churchesList,
+  onAddNewChurch,
 }: RegistrationFlowProps) {
   // Navigation / View Modes
   const [mode, setMode] = useState<"register" | "returning" | "signin" | "confirmed">("register");
   const [isPrintBadgeOpen, setIsPrintBadgeOpen] = useState(false);
+  const [isAddingNewChurch, setIsAddingNewChurch] = useState(false);
+
+  // Available churches derived from database + props
+  const availableChurches = useMemo(() => {
+    const set = new Set<string>([
+      "Grace Covenant Sanctuary (Host)",
+      "Faith Apostolic Church",
+      "Living Streams Assembly",
+      "Redeemed Glory Center",
+      "Christ Ambassadors Fellowship",
+    ]);
+
+    if (churchesList && churchesList.length > 0) {
+      churchesList.forEach((c) => set.add(c));
+    }
+
+    if (existingParticipants) {
+      Object.values(existingParticipants).forEach((p: any) => {
+        if (p.churchName) set.add(p.churchName);
+      });
+    }
+
+    SEED_PARTICIPANTS.forEach((p) => set.add(p.churchName));
+    return Array.from(set).sort();
+  }, [churchesList, existingParticipants]);
 
   // Registration Form State
   const [formData, setFormData] = useState({
@@ -119,9 +149,14 @@ export default function RegistrationFlow({
     setTimeout(() => {
       const newId = generateParticipantId();
       const finalChurch =
-        formData.churchName === "Other" && formData.customChurch.trim()
+        (isAddingNewChurch && formData.customChurch.trim()) ||
+        (formData.churchName === "Other" && formData.customChurch.trim())
           ? formData.customChurch.trim()
           : formData.churchName;
+
+      if (isAddingNewChurch && formData.customChurch.trim() && onAddNewChurch) {
+        onAddNewChurch(formData.customChurch.trim());
+      }
 
       const isOrdained = formData.roleType === "pastor";
 
@@ -459,32 +494,85 @@ export default function RegistrationFlow({
 
             {/* Home Church Affiliation */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-700">Home Church / Affiliation</label>
-              <div className="relative">
-                <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <select
-                  value={formData.churchName}
-                  onChange={(e) => setFormData({ ...formData, churchName: e.target.value })}
-                  className="w-full h-11 pl-10 pr-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all duration-150 ease-apple-spring"
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700">Home Church / Affiliation</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playHapticAudio();
+                    setIsAddingNewChurch(!isAddingNewChurch);
+                  }}
+                  className="text-[11px] font-bold text-[#0F472A] hover:underline flex items-center gap-1"
                 >
-                  <option value="Grace Covenant Sanctuary (Host)">Grace Covenant Sanctuary (Host)</option>
-                  <option value="Faith Apostolic Church">Faith Apostolic Church</option>
-                  <option value="Living Streams Assembly">Living Streams Assembly</option>
-                  <option value="Redeemed Glory Center">Redeemed Glory Center</option>
-                  <option value="Christ Ambassadors Fellowship">Christ Ambassadors Fellowship</option>
-                  <option value="Other">Other Church / Independent Minister</option>
-                </select>
+                  <Plus className="w-3 h-3" />
+                  <span>{isAddingNewChurch ? "Select from database" : "+ Add new church"}</span>
+                </button>
               </div>
 
-              {formData.churchName === "Other" && (
-                <input
-                  type="text"
-                  required
-                  value={formData.customChurch}
-                  onChange={(e) => setFormData({ ...formData, customChurch: e.target.value })}
-                  placeholder="Enter church or ministry name..."
-                  className="w-full h-10 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A] mt-1"
-                />
+              {!isAddingNewChurch ? (
+                <>
+                  <div className="relative">
+                    <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <select
+                      value={formData.churchName}
+                      onChange={(e) => {
+                        if (e.target.value === "ADD_NEW") {
+                          setIsAddingNewChurch(true);
+                        } else {
+                          setFormData({ ...formData, churchName: e.target.value });
+                        }
+                      }}
+                      className="w-full h-11 pl-10 pr-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all duration-150 ease-apple-spring"
+                    >
+                      <optgroup label="Registered Churches in Database">
+                        {availableChurches.map((c: string) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="New Church Registration">
+                        <option value="ADD_NEW">+ Add a new church to database...</option>
+                      </optgroup>
+                    </select>
+                  </div>
+                  <span className="text-[10px] text-slate-400">
+                    {availableChurches.length} churches currently in database. Don't see yours? Click "+ Add new church".
+                  </span>
+                </>
+              ) : (
+                <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-2xl flex flex-col gap-2 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#0F472A] flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-[#0F472A]" />
+                      <span>Enter New Church / Ministry Name</span>
+                    </span>
+                    <span className="text-[10px] font-extrabold bg-[#A3E635] text-[#0F472A] px-2 py-0.2 rounded-full uppercase">
+                      Will Save to DB
+                    </span>
+                  </div>
+
+                  <input
+                    type="text"
+                    required={isAddingNewChurch}
+                    value={formData.customChurch}
+                    onChange={(e) => setFormData({ ...formData, customChurch: e.target.value })}
+                    placeholder="e.g. Victorious Christian Assembly, City Gate Church..."
+                    className="w-full h-10 px-3.5 bg-white border border-emerald-300 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+                    autoFocus
+                  />
+
+                  <div className="flex items-center justify-between text-[11px] text-emerald-800">
+                    <span>This church will be permanently saved for all future registrants.</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingNewChurch(false)}
+                      className="text-xs font-bold text-slate-600 hover:text-slate-900 underline ml-2"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
 

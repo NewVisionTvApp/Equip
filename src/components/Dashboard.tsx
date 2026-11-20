@@ -181,6 +181,26 @@ export default function Dashboard({
     [sessionList, selectedSessionKey]
   );
 
+  // Dynamic delegation counts from registered attendees
+  const delegationsList = useMemo(() => {
+    const counts: Record<string, number> = {};
+    attendees.forEach((a) => {
+      counts[a.churchName] = (counts[a.churchName] || 0) + 1;
+    });
+
+    const dots = ["bg-[#0F472A]", "bg-[#166534]", "bg-[#84CC16]", "bg-emerald-500", "bg-lime-600"];
+    const entries = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count], idx) => ({
+        name,
+        count,
+        dot: dots[idx % dots.length],
+        type: name.includes("Host") ? "Host Ministry" : "Visiting Delegation",
+      }));
+
+    return entries.length > 0 ? entries : DELEGATIONS;
+  }, [attendees]);
+
   // Timer State (Countdown to session end or next event)
   const [secondsRemaining, setSecondsRemaining] = useState(9910); // 02:45:10
   const [isTimerRunning, setIsTimerRunning] = useState(true);
@@ -798,12 +818,12 @@ export default function Dashboard({
             <div className="flex justify-between items-center">
               <span className="text-sm font-bold text-slate-900 tracking-tight">Delegations</span>
               <span className="text-[11px] font-bold text-[#0F472A] bg-lime-100 border border-lime-200/60 px-2 py-0.5 rounded-md">
-                8 Churches
+                {delegationsList.length} Churches
               </span>
             </div>
 
             <div className="flex flex-col gap-3 my-auto">
-              {DELEGATIONS.map((c) => (
+              {delegationsList.slice(0, 4).map((c) => (
                 <div key={c.name} className="flex items-center justify-between text-xs group cursor-pointer hover:translate-x-0.5 transition-transform duration-150">
                   <div className="flex items-center gap-2 truncate pr-2">
                     <span className={`w-2.5 h-2.5 rounded-full ${c.dot} shrink-0 group-hover:scale-125 transition-transform duration-200`} />
@@ -815,7 +835,7 @@ export default function Dashboard({
             </div>
 
             <span className="text-[11px] text-slate-400 font-medium text-center border-t border-slate-100 pt-2">
-              184 Total Expected Attendees
+              {totalRegistrations ?? attendees.length} Total Registered Attendees
             </span>
           </div>
         </section>
