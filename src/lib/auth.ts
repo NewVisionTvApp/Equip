@@ -3,7 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema.ts";
 
-export function createAuth(d1Database: D1Database, secret?: string, baseURL?: string) {
+export function createAuth(d1Database: D1Database, secret: string, baseURL?: string) {
   const db = drizzle(d1Database, { schema });
 
   return betterAuth({
@@ -17,7 +17,7 @@ export function createAuth(d1Database: D1Database, secret?: string, baseURL?: st
         verification: schema.verification,
       },
     }),
-    secret: secret || "local_dev_equip_auth_secret_32_characters_long",
+    secret,
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: false, // Can be toggled when Resend API key is configured

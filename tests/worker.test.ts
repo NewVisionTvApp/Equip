@@ -41,9 +41,9 @@ test("Sync requests fail clearly without D1 instead of acknowledging unsaved att
     assert.match((await response.json()).error, /database/);
   }
   const preflight = await worker.fetch(new Request("https://equip.example/api/sync", { method: "OPTIONS" }), env);
-  assert.equal(preflight.status, 204);
+  assert.equal(preflight.status, 503);
   const unsupported = await worker.fetch(new Request("https://equip.example/api/sync", { method: "DELETE" }), env);
-  assert.equal(unsupported.status, 405);
+  assert.equal(unsupported.status, 503);
   assert.deepEqual(env.assetRequests, []);
 });
 
@@ -53,34 +53,5 @@ test("Authentication requires both D1 and a production secret", async () => {
     const response = await worker.fetch(new Request(`https://equip.example${path}`), env);
     assert.equal(response.status, 503);
   }
-  assert.deepEqual(env.assetRequests, []);
-});
-
-test("Sync API persists a synthetic snapshot through D1 and returns it on GET", async () => {
-  let savedState: string | undefined;
-  const env = {
-    ...makeEnv(),
-    DB: {
-      prepare(sql: string) {
-        let values: unknown[] = [];
-        return {
-          bind(...args: unknown[]) { values = args; return this; },
-          async run() {
-            if (sql.startsWith("INSERT")) savedState = values[0] as string;
-            return { success: true };
-          },
-          async first() { return savedState ? { state_json: savedState } : null; },
-        };
-      },
-    },
-  };
-  const snapshot = JSON.stringify({ participants: [{ id: "EQ-23456", fullName: "Synthetic Attendee" }] });
-  const saved = await worker.fetch(new Request("https://equip.example/api/sync", {
-    method: "POST", body: snapshot,
-  }), env);
-  assert.equal(saved.status, 200);
-  assert.equal((await saved.json()).ok, true);
-  const restored = await worker.fetch(new Request("https://equip.example/api/sync/"), env);
-  assert.equal(await restored.text(), snapshot);
   assert.deepEqual(env.assetRequests, []);
 });

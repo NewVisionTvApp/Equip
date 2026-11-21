@@ -1,5 +1,5 @@
-import { SEED_PARTICIPANTS } from "../db/seed-data";
-import { generateParticipantId } from "./id-generator";
+import { SEED_PARTICIPANTS } from "../db/seed-data.ts";
+import { generateParticipantId } from "./id-generator.ts";
 
 export interface SessionConfig {
   key: "mon_am" | "mon_pm" | "tue_am" | "tue_pm" | "wed_am";
@@ -52,6 +52,7 @@ export function formatEventFullDateRange(startDate?: string, endDate?: string, f
 }
 
 export interface StoredParticipant {
+  userId?: string;
   id: string; // "EQ-XXXXX"
   fullName: string;
   phone: string;
@@ -106,7 +107,7 @@ export interface AttendeeViewRecord extends StoredParticipant {
 
 const STORAGE_KEY = "equip_platform_state_v1";
 
-interface PlatformState {
+export interface PlatformState {
   events: EquipEvent[];
   activeEventId: string;
   participants: Record<string, StoredParticipant>; // keyed by participant ID
@@ -442,6 +443,11 @@ export function loadPlatformState(): PlatformState {
   }
 }
 
+export function createEmptyPlatformState(): PlatformState {
+  const initial = getInitialState();
+  return { ...initial, participants: {}, registrations: [], attendance: {}, churches: [] };
+}
+
 const SYNC_CHANNEL_NAME = "equip_platform_sync_v1";
 let broadcastChannel: BroadcastChannel | null = null;
 if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -615,6 +621,7 @@ export function registerParticipantForEvent(
     roleOffice: string;
     location: string;
     eventId: string;
+    isOrdained?: boolean;
   }
 ): {
   state: PlatformState;
@@ -635,12 +642,12 @@ export function registerParticipantForEvent(
   }
 
   let isExistingParticipant = Boolean(participant);
-  const isOrdained =
+  const isOrdained = input.isOrdained ?? (
     input.roleOffice.toLowerCase().includes("pastor") ||
     input.roleOffice.toLowerCase().includes("bishop") ||
     input.roleOffice.toLowerCase().includes("reverend") ||
     input.roleOffice.toLowerCase().includes("minister") ||
-    input.roleOffice.toLowerCase().includes("apostle");
+    input.roleOffice.toLowerCase().includes("apostle"));
 
   if (!participant) {
     const existingIds = new Set(Object.keys(state.participants));

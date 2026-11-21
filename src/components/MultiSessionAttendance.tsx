@@ -20,6 +20,7 @@ import EditSessionModal from "./EditSessionModal";
 import CameraScannerModal from "./CameraScannerModal";
 
 interface MultiSessionAttendanceProps {
+  canManage?: boolean;
   onBackToDashboard: () => void;
   onOpenDirectory: () => void;
   onOpenRegister?: () => void;
@@ -85,6 +86,7 @@ const SESSIONS_DATA = [
 ];
 
 export default function MultiSessionAttendance({
+  canManage = true,
   onBackToDashboard,
   onOpenDirectory,
   onOpenRegister,
@@ -347,7 +349,7 @@ export default function MultiSessionAttendance({
             onClick={onBackToDashboard}
             className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100/80 px-3 py-1.5 rounded-xl border border-slate-200/50 active:scale-95 transition-all duration-150 ease-apple-spring"
           >
-            ← Dashboard
+            {canManage ? "Back to dashboard" : "My account"}
           </button>
           <div className="flex flex-col">
             <div className="flex items-center gap-2 flex-wrap">
@@ -373,14 +375,14 @@ export default function MultiSessionAttendance({
             </button>
           )}
 
-          <button
+          {canManage && (<button
             type="button"
             onClick={onOpenDirectory}
             className="h-9 px-3.5 bg-slate-100 hover:bg-slate-200/80 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs"
           >
             <Users className="w-3.5 h-3.5" />
             <span>Participant Directory</span>
-          </button>
+          </button>)}
 
           <button
             type="button"
@@ -396,14 +398,14 @@ export default function MultiSessionAttendance({
             <span className="hidden sm:inline">{isMuted ? "Silent Mode" : "Sound On"}</span>
           </button>
 
-          <button
+          {canManage && (<button
             type="button"
             onClick={handleExportSessionCSV}
             className="h-9 px-3.5 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export Session CSV</span>
-          </button>
+          </button>)}
         </div>
       </header>
 
@@ -462,7 +464,7 @@ export default function MultiSessionAttendance({
           <div className="flex flex-col gap-1 z-10">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-extrabold text-white leading-snug">{activeSession.name}</h2>
-              <button
+              {onUpdateSession && (<button
                 type="button"
                 onClick={() => setEditingSession(activeSession as any)}
                 className="px-2 py-0.5 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-colors flex items-center gap-1 text-[10px] font-bold border border-white/20 shrink-0"
@@ -470,7 +472,7 @@ export default function MultiSessionAttendance({
               >
                 <Pencil className="w-2.5 h-2.5 text-[#A3E635]" />
                 <span>Edit Preacher</span>
-              </button>
+              </button>)}
             </div>
             <p className="text-xs text-emerald-200">
               Presider: <strong className="text-white">{activeSession.speaker}</strong> · {activeSession.time}

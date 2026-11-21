@@ -1,28 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DatabaseSync } from "node:sqlite";
-import { readFileSync, readdirSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { createAuth } from "../src/lib/auth.ts";
+import { testDatabase } from "./helpers/database.ts";
 
 test("Migrated SQLite schema supports sign-up, password login, and session lookup through the D1 adapter", async () => {
-  const sqlite = new DatabaseSync(":memory:");
+  const { database, close } = testDatabase();
   try {
-    for (const file of readdirSync("drizzle/migrations").filter(file => file.endsWith(".sql")).sort()) {
-      sqlite.exec(readFileSync(`drizzle/migrations/${file}`, "utf8"));
-    }
-    const database = {
-      prepare(sql: string) {
-        const statement = sqlite.prepare(sql);
-        let params: unknown[] = [];
-        return {
-          bind(...values: unknown[]) { params = values; return this; },
-          async run() { statement.run(...params); return { success: true }; },
-          async all() { return { success: true, results: statement.all(...params) }; },
-          async raw() { statement.setReturnArrays(true); return statement.all(...params); },
-        };
-      },
-    };
     const origin = "https://equip.example";
     const auth = createAuth(database, randomBytes(48).toString("hex"), origin);
     const email = "auth-test@example.invalid";
@@ -46,6 +30,6 @@ test("Migrated SQLite schema supports sign-up, password login, and session looku
     assert.equal(session.status, 200);
     assert.equal((await session.json()).user.email, email);
   } finally {
-    sqlite.close();
+    close();
   }
 });

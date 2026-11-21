@@ -21,35 +21,31 @@ import {
   Share2,
 } from "lucide-react";
 import QRCodeView from "./QRCodeView";
-import { generateParticipantId } from "@/lib/id-generator";
 import { authClient } from "@/lib/auth-client";
-import { SEED_PARTICIPANTS, SyntheticParticipantSeed } from "@/db/seed-data";
+import { apiRequest } from "@/lib/api-client";
+import type { StoredParticipant } from "@/lib/store";
 import PrintableBadgeModal from "./PrintableBadgeModal";
 
 export interface RegistrationFlowProps {
   onBackToDashboard: () => void;
-  onParticipantRegistered?: (participant: any, isReturning?: boolean) => void;
+  onParticipantRegistered?: (participant: StoredParticipant, isReturning?: boolean) => void;
   activeEventName?: string;
   activeEventId?: string;
   activeEventMonthYear?: string;
   activeEventTheme?: string;
   activeEventDates?: string;
-  existingParticipants?: Record<string, any>;
   churchesList?: string[];
-  onAddNewChurch?: (churchName: string) => void;
 }
 
 export default function RegistrationFlow({
   onBackToDashboard,
   onParticipantRegistered,
   activeEventName,
-  activeEventId: _activeEventId,
+  activeEventId,
   activeEventMonthYear,
   activeEventTheme,
   activeEventDates,
-  existingParticipants,
   churchesList,
-  onAddNewChurch,
 }: RegistrationFlowProps) {
   // Navigation / View Modes
   const [mode, setMode] = useState<"register" | "returning" | "signin" | "confirmed">("register");
@@ -87,15 +83,8 @@ export default function RegistrationFlow({
       churchesList.forEach((c) => set.add(c));
     }
 
-    if (existingParticipants) {
-      Object.values(existingParticipants).forEach((p: any) => {
-        if (p.churchName) set.add(p.churchName);
-      });
-    }
-
-    SEED_PARTICIPANTS.forEach((p) => set.add(p.churchName));
     return Array.from(set).sort();
-  }, [churchesList, existingParticipants]);
+  }, [churchesList]);
 
   // Registration Form State
   const [formData, setFormData] = useState({
@@ -111,7 +100,8 @@ export default function RegistrationFlow({
 
   // Returning lookup state
   const [lookupQuery, setLookupQuery] = useState("");
-  const [lookupResult, setLookupResult] = useState<SyntheticParticipantSeed | null>(null);
+  const [lookupPhone, setLookupPhone] = useState("");
+  const [lookupResult, setLookupResult] = useState<StoredParticipant | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
 
   // Sign-in state
@@ -134,6 +124,7 @@ export default function RegistrationFlow({
   // Copied state
   const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [registrationError, setRegistrationError] = useState<string | null>(null);
 
   // Haptic audio feedback
   const playHapticAudio = () => {
@@ -163,112 +154,56 @@ export default function RegistrationFlow({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Submit New Registration
-  const handleRegisterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.fullName.trim() || !formData.phone.trim()) return;
-
-    setIsSubmitting(true);
+  const confirmParticipant = (participant: StoredParticipant, returning = false) => {
+    onParticipantRegistered?.(participant, returning);
+    setConfirmedPass({ ...participant, date: displayEventDates });
     playHapticAudio();
-
-    setTimeout(() => {
-      const newId = generateParticipantId();
-      const finalChurch =
-        (isAddingNewChurch && formData.customChurch.trim()) ||
-        (formData.churchName === "Other" && formData.customChurch.trim())
-          ? formData.customChurch.trim()
-          : formData.churchName;
-
-      if (isAddingNewChurch && formData.customChurch.trim() && onAddNewChurch) {
-        onAddNewChurch(formData.customChurch.trim());
-      }
-
-      const isOrdained = formData.roleType === "pastor";
-
-      const newParticipant: SyntheticParticipantSeed = {
-        id: newId,
-        fullName: formData.fullName.trim(),
-        phone: formData.phone.trim(),
-        email: formData.email.trim() || `${newId.toLowerCase()}@equipchurch.org`,
-        churchName: finalChurch,
-        isHostChurch: finalChurch.includes("Host") || finalChurch.includes("Grace Covenant"),
-        roleOffice: formData.roleOffice,
-        location: formData.location,
-      };
-
-      if (onParticipantRegistered) {
-        onParticipantRegistered(newParticipant);
-      }
-
-      setConfirmedPass({
-        id: newId,
-        fullName: newParticipant.fullName,
-        roleOffice: newParticipant.roleOffice,
-        churchName: newParticipant.churchName,
-        isOrdained,
-        location: newParticipant.location || "Lagos",
-        date: displayEventDates,
-      });
-
-      setIsSubmitting(false);
-      setMode("confirmed");
-    }, 600);
-  };
-
-  // Returning Participant Lookup
-  const handleLookupSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!lookupQuery.trim()) return;
-
-    const q = lookupQuery.trim().toUpperCase();
-    const candidateList = existingParticipants
-      ? Object.values(existingParticipants)
-      : SEED_PARTICIPANTS;
-
-    const found = candidateList.find(
-      (p: any) =>
-        p.id.toUpperCase() === q ||
-        p.phone.replace(/\s+/g, "").includes(q.replace(/\s+/g, "")) ||
-        (p.email && p.email.toUpperCase().includes(q)) ||
-        p.fullName.toUpperCase().includes(q)
-    );
-
-    if (found) {
-      playHapticAudio();
-      setLookupResult(found as any);
-      setLookupError(null);
-    } else {
-      setLookupResult(null);
-      setLookupError(`No previous registration found for "${lookupQuery}". Register as a new participant.`);
-    }
-  };
-
-  // Confirm Returning Attendee
-  const handleConfirmReturning = () => {
-    if (!lookupResult) return;
-    playHapticAudio();
-
-    if (onParticipantRegistered) {
-      onParticipantRegistered(lookupResult, true);
-    }
-
-    const isOrdained =
-      lookupResult.roleOffice.toLowerCase().includes("pastor") ||
-      lookupResult.roleOffice.toLowerCase().includes("bishop") ||
-      lookupResult.roleOffice.toLowerCase().includes("reverend") ||
-      lookupResult.roleOffice.toLowerCase().includes("apostle");
-
-    setConfirmedPass({
-      id: lookupResult.id,
-      fullName: lookupResult.fullName,
-      roleOffice: lookupResult.roleOffice,
-      churchName: lookupResult.churchName,
-      isOrdained,
-      location: lookupResult.location || "Lagos",
-      date: displayEventDates,
-    });
-
     setMode("confirmed");
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setRegistrationError(null);
+    try {
+      const finalChurch = (isAddingNewChurch || formData.churchName === "Other") ? formData.customChurch.trim() : formData.churchName;
+      const result = await apiRequest<{ participant: StoredParticipant }>("/api/public/register", {
+        method: "POST", body: JSON.stringify({
+          fullName: formData.fullName, phone: formData.phone, email: formData.email,
+          churchName: finalChurch, roleOffice: formData.roleOffice, location: formData.location,
+          isOrdained: formData.roleType === "pastor", eventId: activeEventId,
+        }),
+      });
+      confirmParticipant(result.participant);
+    } catch (error) { setRegistrationError(error instanceof Error ? error.message : "Registration failed. Please try again."); }
+    finally { setIsSubmitting(false); }
+  };
+
+  const handleLookupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setLookupError(null);
+    setLookupResult(null);
+    try {
+      const result = await apiRequest<{ participant: StoredParticipant }>("/api/public/lookup", {
+        method: "POST", body: JSON.stringify({ id: lookupQuery, phone: lookupPhone }),
+      });
+      setLookupResult(result.participant);
+    } catch (error) { setLookupError(error instanceof Error ? error.message : "Profile lookup failed."); }
+    finally { setIsSubmitting(false); }
+  };
+
+  const handleConfirmReturning = async () => {
+    if (!lookupResult) return;
+    setIsSubmitting(true);
+    setLookupError(null);
+    try {
+      const result = await apiRequest<{ participant: StoredParticipant }>("/api/public/return", {
+        method: "POST", body: JSON.stringify({ id: lookupResult.id, phone: lookupPhone, eventId: activeEventId }),
+      });
+      confirmParticipant(result.participant, true);
+    } catch (error) { setLookupError(error instanceof Error ? error.message : "Could not renew your pass."); }
+    finally { setIsSubmitting(false); }
   };
 
   // 1-Tap WhatsApp Share for Delegates
@@ -302,10 +237,10 @@ export default function RegistrationFlow({
       } else {
         playHapticAudio();
         // Redirect or show profile
-        setMode("register");
+        onBackToDashboard();
       }
     } catch (err: any) {
-      setAuthError(err.message || "Sign in failed. Using simulated profile.");
+      setAuthError(err.message || "Sign in failed. Please try again.");
     } finally {
       setAuthLoading(false);
     }
@@ -321,7 +256,7 @@ export default function RegistrationFlow({
           className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200/60 shadow-apple-card active:scale-95 transition-all duration-150 ease-apple-spring"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span>Admin Dashboard</span>
+          <span>My account</span>
         </button>
 
         <div className="flex items-center gap-2">
@@ -503,8 +438,9 @@ export default function RegistrationFlow({
 
             {/* Role / Office Specific dropdown */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-slate-700">Ministerial / Service Role</label>
+              <label htmlFor="ministerial-role" className="text-xs font-bold text-slate-700">Ministerial / Service Role</label>
               <select
+                id="ministerial-role"
                 value={formData.roleOffice}
                 onChange={(e) => setFormData({ ...formData, roleOffice: e.target.value })}
                 className="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all duration-150 ease-apple-spring"
@@ -521,6 +457,7 @@ export default function RegistrationFlow({
                   </>
                 ) : (
                   <>
+                    <option value="Member">Member</option>
                     <option value="Church Worker">Church Worker</option>
                     <option value="Choir / Music Ministry">Choir / Music Ministry</option>
                     <option value="Ushering / Protocol">Ushering / Protocol</option>
@@ -631,6 +568,7 @@ export default function RegistrationFlow({
             </div>
 
             {/* Submit CTA */}
+            {registrationError && <p role="alert" className="text-sm text-red-700">{registrationError}</p>}
             <button
               type="submit"
               disabled={isSubmitting}
@@ -652,18 +590,21 @@ export default function RegistrationFlow({
         {mode === "returning" && (
           <div className="flex flex-col gap-4">
             <p className="text-xs text-slate-500">
-              Enter your phone number or persistent Participant ID (<span className="font-mono text-[#0F472A] font-bold">EQ-XXXXX</span>) to immediately renew your pass for this month.
+              Enter your persistent Participant ID (<span className="font-mono text-[#0F472A] font-bold">EQ-XXXXX</span>) and the phone number on your profile to renew your pass.
             </p>
 
             <form onSubmit={handleLookupSubmit} className="flex flex-col gap-3">
+              <label htmlFor="returning-phone" className="text-xs font-semibold text-slate-700">Phone number on your profile</label>
+              <input id="returning-phone" type="tel" required autoComplete="tel" value={lookupPhone} onChange={e => { setLookupPhone(e.target.value); setLookupResult(null); }} className="h-11 rounded-xl border border-slate-300 px-3 text-sm" />
               <div className="relative">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   required
                   value={lookupQuery}
-                  onChange={(e) => setLookupQuery(e.target.value)}
-                  placeholder="e.g. EQ-82914 or +2348031234567..."
+                  onChange={(e) => { setLookupQuery(e.target.value); setLookupResult(null); }}
+                  aria-label="Participant ID"
+                  placeholder="e.g. EQ-23456"
                   className="w-full h-11 pl-10 pr-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all font-mono"
                 />
               </div>
@@ -673,7 +614,7 @@ export default function RegistrationFlow({
                 className="w-full h-11 bg-[#0F472A] hover:bg-[#165A36] active:scale-[0.98] text-white rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all shadow-xs"
               >
                 <Search className="w-3.5 h-3.5" />
-                <span>Find My Profile</span>
+                <span>{isSubmitting ? "Checking…" : "Find My Profile"}</span>
               </button>
             </form>
 
@@ -705,6 +646,7 @@ export default function RegistrationFlow({
                 <button
                   type="button"
                   onClick={handleConfirmReturning}
+                  disabled={isSubmitting}
                   className="w-full h-10 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98]"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[#A3E635]" />
@@ -764,7 +706,7 @@ export default function RegistrationFlow({
               className="w-full h-11 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-[0.98] disabled:opacity-70"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>{authLoading ? "Authenticating..." : "Sign In with Better Auth"}</span>
+              <span>{authLoading ? "Authenticating..." : "Sign in"}</span>
             </button>
           </form>
         )}

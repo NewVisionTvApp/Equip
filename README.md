@@ -36,6 +36,19 @@ Shared attendance uses the dedicated D1 database `equip-db`, bound as `DB` in `w
 
 For local Worker login tests, set `BETTER_AUTH_URL=http://localhost:8787` and a local-only `BETTER_AUTH_SECRET` in ignored `.dev.vars`. The D1 binding uses a local database by default; apply migrations with `pnpm db:migrate:local`. Run `pnpm test` for synthetic registration, sync, and authentication checks.
 
+## Accounts and access
+
+- Administrators manage programmes, participant profiles, backups, and account roles at `/staff`.
+- Ushers can read the attendance roster, register walk-ins, and record check-ins. Programme editing and account management require an administrator.
+- Attendees use `/account` to create an account, link their Participant ID using the phone number on their profile, and view or edit their own records.
+- Public registration at `/register` works without an account. Returning attendees supply both their Participant ID and phone number. The non-ordained Ministerial / Service Role list includes **Member**.
+
+New accounts always receive attendee access. Initial administrator promotion is an operator action after the owner creates their account; subsequent role changes are made by administrators in Account access. Role changes revoke the affected account's sessions. Users cannot demote their own administrator account.
+
+`GET /api/sync` requires an administrator or usher session. Writes use validated, role-checked actions instead of replacing the whole shared snapshot. Concurrent changes use a database revision check; stale backup imports are rejected. Public APIs return programme information and individual registration results, never the participant directory. Staff records stay in browser memory and the legacy shared localStorage cache is removed.
+
+For Vite development, start the local Worker alongside `pnpm dev`; Vite proxies `/api` to port 8787. Set `BETTER_AUTH_URL` to the frontend origin used for login (for example `http://localhost:3000`).
+
 The installed Wrangler 3 version supports Workers Logs, which are enabled. Its schema does not support the newer traces setting; adding traces requires a separate Wrangler upgrade.
 
 References: [Pages to Workers migration](https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/), [static asset configuration](https://developers.cloudflare.com/workers/static-assets/binding/), and [Workers Builds settings](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/).

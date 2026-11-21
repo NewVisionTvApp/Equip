@@ -1,391 +1,152 @@
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Dashboard from "./components/Dashboard";
 import RegistrationFlow from "./components/RegistrationFlow";
 import AdminDirectory from "./components/AdminDirectory";
 import MultiSessionAttendance from "./components/MultiSessionAttendance";
-import EventModal, { EquipEvent } from "./components/EventModal";
-import { Calendar, ChevronDown, RotateCcw, Smartphone, Download, Upload } from "lucide-react";
-import {
-  loadPlatformState,
-  savePlatformState,
-  resetPlatformState,
-  getAttendeesForEvent,
-  registerParticipantForEvent,
-  updateParticipantRecord,
-  toggleSessionAttendanceRecord,
-  updateEventRecord,
-  updateEventSessionRecord,
-  getRegisteredChurches,
-  addRegisteredChurch,
-  formatEventFullDateRange,
-  subscribeToPlatformSync,
-  exportPlatformStateJSON,
-  importPlatformStateJSON,
-  SessionConfig,
-} from "./lib/store";
+import EventModal from "./components/EventModal";
+import { SignInPanel, MyAccount, StaffAccess } from "./components/AccountAccess";
+import { authClient } from "./lib/auth-client";
+import { apiRequest, type Programme } from "./lib/api-client";
+import { getAttendeesForEvent, formatEventFullDateRange, type PlatformState, type SessionConfig, type StoredParticipant } from "./lib/store";
+import type { PlatformAction } from "./lib/platform-schema";
 
-type AppView = "dashboard" | "directory" | "attendance" | "register";
-
-function getRouteFromLocation(): AppView {
-  if (typeof window === "undefined") return "dashboard";
-  const path = window.location.pathname.toLowerCase();
-  const hash = window.location.hash.toLowerCase().replace("#", "").replace("/", "");
-
-  if (path === "/register" || hash === "register") return "register";
-  if (path === "/attendance" || path === "/usher" || hash === "attendance" || hash === "usher") return "attendance";
-  if (path === "/directory" || hash === "directory") return "directory";
+type AppView = "dashboard" | "directory" | "attendance" | "register" | "account" | "staff";
+type Snapshot = { state: PlatformState; revision: number; identity: string };
+function route(): AppView {
+  const path = window.location.pathname;
+  if (path === "/register") return "register";
+  if (path === "/attendance" || path === "/usher") return "attendance";
+  if (path === "/directory") return "directory";
+  if (path === "/account" || path === "/login") return "account";
+  if (path === "/staff") return "staff";
   return "dashboard";
 }
 
 export default function App() {
-  const [view, setView] = useState<AppView>(() => getRouteFromLocation());
+  const { data: session, isPending, refetch } = authClient.useSession();
+  const role = session?.user.role || "attendee";
+  const isAdmin = Boolean(session && role === "admin");
+  const isStaff = Boolean(session && (role === "admin" || role === "usher"));
+  const identity = `${session?.user.id || "guest"}:${role}`;
+  const [view, setView] = useState<AppView>(route);
+  const [programme, setProgramme] = useState<Programme | null>(null);
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [eventId, setEventId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const [platformState, setPlatformState] = useState(() => loadPlatformState());
+  const state = snapshot?.identity === identity && isStaff ? snapshot.state : null;
+  const navigate = (target: AppView) => {
+    window.history.pushState(null, "", target === "dashboard" ? "/" : `/${target}`);
+    setView(target); setError("");
+  };
+  const acceptSnapshot = (data: { state: PlatformState; revision: number }, owner = identity) => {
+    setSnapshot(current => current?.identity === owner && current.revision > data.revision ? current : { ...data, identity: owner });
+  };
 
-  // Listen for browser Back / Forward buttons & cross-tab / cross-device synchronization
   useEffect(() => {
-    const handlePopState = () => {
-      setView(getRouteFromLocation());
-    };
-    window.addEventListener("popstate", handlePopState);
-
-    // Cross-tab real-time sync subscription
-    const unsubscribeSync = subscribeToPlatformSync(() => {
-      setPlatformState(loadPlatformState());
-    });
-
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-      unsubscribeSync();
-    };
+    const pop = () => setView(route());
+    window.addEventListener("popstate", pop);
+    // Remove the legacy shared roster cache; protected records now stay in memory only.
+    localStorage.removeItem("equip_platform_state_v1");
+    return () => window.removeEventListener("popstate", pop);
   }, []);
 
-  // Navigate to a view and update browser URL
-  const navigateTo = (newView: AppView) => {
-    setView(newView);
-    const targetPath = newView === "dashboard" ? "/" : `/${newView}`;
-    if (window.location.pathname !== targetPath) {
-      window.history.pushState(null, "", targetPath);
-    }
-  };
-
-  const activeEvent = useMemo(
-    () => platformState.events.find((e) => e.id === platformState.activeEventId) || platformState.events[0],
-    [platformState.events, platformState.activeEventId]
-  );
-
-  // Active attendees for the selected monthly event
-  const activeAttendees = useMemo(
-    () => getAttendeesForEvent(platformState, activeEvent.id),
-    [platformState, activeEvent.id]
-  );
-
-  // Registered churches list
-  const registeredChurches = useMemo(
-    () => getRegisteredChurches(platformState),
-    [platformState]
-  );
-
-  const ordainedCount = useMemo(
-    () => activeAttendees.filter((a) => a.isOrdained).length,
-    [activeAttendees]
-  );
-
-  // Events list with dynamic registration count
-  const dynamicEvents = useMemo(() => {
-    return platformState.events.map((ev) => ({
-      ...ev,
-      registeredCount: platformState.registrations.filter((r) => r.eventId === ev.id).length,
-    }));
-  }, [platformState.events, platformState.registrations]);
-
-  const handleSelectEvent = (eventId: string) => {
-    const updated = { ...platformState, activeEventId: eventId };
-    setPlatformState(updated);
-    savePlatformState(updated);
-  };
-
-  const handleCreateEvent = (newEvent: EquipEvent) => {
-    const updated = {
-      ...platformState,
-      events: [...platformState.events, newEvent],
-      activeEventId: newEvent.id,
-    };
-    setPlatformState(updated);
-    savePlatformState(updated);
-  };
-
-  const handleUpdateEvent = (updatedEvent: EquipEvent) => {
-    const updated = updateEventRecord(platformState, updatedEvent.id, updatedEvent);
-    setPlatformState(updated);
-  };
-
-  const handleUpdateSession = (sessionKey: string, sessionData: Partial<SessionConfig>) => {
-    const updated = updateEventSessionRecord(
-      platformState,
-      activeEvent.id,
-      sessionKey,
-      sessionData
-    );
-    setPlatformState(updated);
-  };
-
-  const handleRegisterParticipant = (participantData: any, _isReturning: boolean = false) => {
-    const res = registerParticipantForEvent(platformState, {
-      fullName: participantData.fullName,
-      phone: participantData.phone,
-      email: participantData.email,
-      churchName: participantData.churchName,
-      roleOffice: participantData.roleOffice,
-      location: participantData.location || "Lagos",
-      eventId: activeEvent.id,
-    });
-    setPlatformState(res.state);
-  };
-
-  const handleAddNewChurch = (churchName: string) => {
-    const updated = addRegisteredChurch(platformState, churchName);
-    setPlatformState(updated);
-  };
-
-  const handleToggleAttendance = (participantId: string, sessionKey: string) => {
-    const updated = toggleSessionAttendanceRecord(
-      platformState,
-      participantId,
-      activeEvent.id,
-      sessionKey
-    );
-    setPlatformState(updated);
-  };
-
-  const handleUpdateParticipant = (participantId: string, updates: any) => {
-    const res = updateParticipantRecord(platformState, participantId, updates);
-    setPlatformState(res.state);
-  };
-
-  const handleExportBackup = () => {
-    const json = exportPlatformStateJSON(platformState);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `equip_database_snapshot_${new Date().toISOString().split("T")[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportBackup = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const content = event.target?.result as string;
-          const imported = importPlatformStateJSON(content);
-          setPlatformState(imported);
-          alert("Platform database snapshot restored successfully!");
-        } catch (err: any) {
-          alert(`Failed to restore backup: ${err.message}`);
+  useEffect(() => {
+    let active = true;
+    setIsEventModalOpen(false);
+    const refresh = async () => {
+      try {
+        const publicData = await apiRequest<Programme>("/api/public/programme");
+        if (active) setProgramme(publicData);
+        if (isStaff) {
+          const data = await apiRequest<{ state: PlatformState; revision: number }>("/api/sync");
+          if (active) acceptSnapshot(data, identity);
         }
-      };
-      reader.readAsText(file);
+      } catch (error) {
+        if (active) { setError(error instanceof Error ? error.message : "Could not load programme data."); if (isStaff) void refetch(); }
+      }
     };
-    input.click();
+    void refresh();
+    const timer = isStaff ? window.setInterval(refresh, 5000) : undefined;
+    return () => { active = false; if (timer) window.clearInterval(timer); };
+  }, [identity, isStaff]);
+
+  const events = state?.events || programme?.events || [];
+  const activeEvent = events.find(event => event.id === eventId) || events.find(event => event.id === (state?.activeEventId || programme?.activeEventId)) || events[0];
+  const attendees = state && activeEvent ? getAttendeesForEvent(state, activeEvent.id) : [];
+  const mutate = async (action: PlatformAction) => {
+    setSaving(true); setError("");
+    try { acceptSnapshot(await apiRequest<{ state: PlatformState; revision: number }>("/api/platform/actions", { method: "POST", body: JSON.stringify(action) })); }
+    catch (error) { setError(error instanceof Error ? error.message : "The change could not be saved."); }
+    finally { setSaving(false); }
   };
-
-  const handleResetData = () => {
-    if (confirm("Reset demo data back to initial seed state with 184 registrations?")) {
-      const reset = resetPlatformState();
-      setPlatformState(reset);
-    }
+  const updateSession = (sessionKey: string, data: Partial<SessionConfig>) => {
+    if (activeEvent) void mutate({ type: "session.update", eventId: activeEvent.id, sessionKey: sessionKey as SessionConfig["key"], data });
   };
+  const toggleAttendance = (participantId: string, sessionKey: string) => {
+    if (!activeEvent || !state) return;
+    const attended = !state.attendance[`${participantId}_${activeEvent.id}_${sessionKey}`]?.attended;
+    void mutate({ type: "attendance.set", participantId, eventId: activeEvent.id, sessionKey: sessionKey as SessionConfig["key"], attended });
+  };
+  const exportBackup = () => {
+    if (!state || !isAdmin) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a"); link.href = url; link.download = `equip-backup-${new Date().toISOString().slice(0, 10)}.json`; link.click(); URL.revokeObjectURL(url);
+  };
+  const importBackup = (file?: File) => {
+    if (!file || !snapshot || !isAdmin) return;
+    file.text().then(text => mutate({ type: "state.import", data: JSON.parse(text), revision: snapshot.revision })).catch(() => setError("The backup file could not be read. Choose an Equip JSON backup."));
+  };
+  const afterRegistration = () => {
+    apiRequest<Programme>("/api/public/programme").then(setProgramme).catch(() => {});
+    if (isStaff) apiRequest<{ state: PlatformState; revision: number }>("/api/sync").then(data => acceptSnapshot(data)).catch(() => {});
+  };
+  const signOut = async () => {
+    setSaving(true);
+    try {
+      const result = await authClient.signOut();
+      if (result.error) throw new Error(result.error.message);
+      setSnapshot(null); navigate("account"); await refetch();
+    } catch (error) { setError(error instanceof Error ? error.message : "Sign out failed. Please try again."); }
+    finally { setSaving(false); }
+  };
+  const effectiveView = view === "dashboard" && role === "usher" ? "attendance" : view;
+  const needsAdmin = ["dashboard", "directory", "staff"].includes(effectiveView);
+  const allowedStaffView = isStaff && (!needsAdmin || isAdmin);
+  const navClass = "min-h-11 rounded-lg px-3 py-2 text-sm font-semibold hover:bg-emerald-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-300";
 
-  return (
-    <div>
-      {/* Top Banner Navigation Bar */}
-      <div className="bg-[#0B0F17] text-white px-4 py-2 flex flex-col sm:flex-row sm:items-center justify-between text-xs border-b border-slate-800 gap-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <img src="/logo.png" alt="Equip Logo" className="w-6 h-5 object-contain" />
-          <span className="font-bold text-slate-200">Equip 3.0 Platform</span>
-          <span className="text-slate-600 hidden sm:inline">|</span>
-
-          {/* Active Event Switcher Badge */}
-          <button
-            type="button"
-            onClick={() => setIsEventModalOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-semibold border border-slate-700/80 transition-all active:scale-95 shadow-2xs"
-            title="Click to switch or create monthly programme event"
-          >
-            <Calendar className="w-3.5 h-3.5 text-[#A3E635]" />
-            <span className="font-bold text-white">{activeEvent.monthYear}</span>
-            <span className="text-[10px] text-emerald-300 font-mono bg-emerald-950/80 border border-emerald-800 px-1.5 py-0.5 rounded ml-0.5">
-              {formatEventFullDateRange(activeEvent.startDate, activeEvent.endDate, activeEvent.monthYear)}
-            </span>
-            <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5" />
-          </button>
+  return <div className="min-h-screen bg-slate-50 text-slate-900">
+    <header className="bg-[#0B0F17] text-white">
+      <nav aria-label="Main navigation" className="mx-auto flex max-w-7xl flex-wrap items-center gap-1 px-4 py-3">
+        <button onClick={() => navigate(isStaff ? "dashboard" : "register")} className={`${navClass} mr-auto text-base`}>Equip</button>
+        {isAdmin && <><button className={navClass} onClick={() => navigate("dashboard")}>Dashboard</button><button className={navClass} onClick={() => navigate("directory")}>Directory</button><button className={navClass} onClick={() => navigate("staff")}>Account access</button></>}
+        {isStaff && <button className={navClass} onClick={() => navigate("attendance")}>Attendance</button>}
+        <button className={navClass} onClick={() => navigate("register")}>Register</button>
+        <button className={navClass} onClick={() => navigate("account")}>{session ? "My account" : "Sign in / Create account"}</button>
+        {session && <button className={navClass} disabled={saving} onClick={() => void signOut()}>Sign out</button>}
+      </nav>
+    </header>
+    {error && <div role="alert" className="mx-auto max-w-7xl px-5 py-4 text-sm font-medium text-red-700">{error}<button className="ml-3 min-h-11 underline underline-offset-4" onClick={() => window.location.reload()}>Reload</button></div>}
+    {saving && <p role="status" className="mx-auto max-w-7xl px-5 py-2 text-sm text-emerald-800">Saving…</p>}
+    {isPending ? <p role="status" className="px-5 py-12 text-center text-sm text-slate-600">Checking your session…</p>
+      : view === "register" ? activeEvent ? <RegistrationFlow onBackToDashboard={() => navigate("account")} activeEventName={activeEvent.title} activeEventId={activeEvent.id} activeEventMonthYear={activeEvent.monthYear} activeEventTheme={activeEvent.theme} activeEventDates={formatEventFullDateRange(activeEvent.startDate, activeEvent.endDate, activeEvent.monthYear)} churchesList={programme?.churches || []} onParticipantRegistered={afterRegistration} /> : <p role="status" className="px-5 py-12 text-center text-sm text-slate-600">{programme ? "Registration opens soon." : "Loading programme details…"}</p>
+      : !session ? <SignInPanel onSuccess={() => { void refetch(); navigate("account"); }} onRegister={() => navigate("register")} />
+      : view === "account" || !isStaff ? <MyAccount key={session.user.id} user={session.user} onRegister={() => navigate("register")} />
+      : !allowedStaffView ? <main className="mx-auto max-w-xl px-5 py-12"><h1 className="text-2xl font-semibold">Administrator access required</h1><p className="mt-3 text-sm text-slate-600">Your usher account can register walk-ins and record attendance.</p><button className="mt-5 min-h-11 font-semibold text-emerald-800 underline" onClick={() => navigate("attendance")}>Open attendance desk</button></main>
+      : effectiveView === "staff" ? <StaffAccess currentUserId={session.user.id} />
+      : !state || !activeEvent ? <p role="status" className="px-5 py-12 text-center text-sm text-slate-600">Loading protected programme records…</p>
+      : <>
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-5 py-4">
+          <label className="text-sm font-medium">Programme<select value={activeEvent.id} onChange={e => setEventId(e.target.value)} className="ml-2 min-h-11 max-w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">{events.map(event => <option key={event.id} value={event.id}>{event.monthYear}</option>)}</select></label>
+          {isAdmin && <><button className="min-h-11 px-3 text-sm font-semibold text-emerald-800 underline underline-offset-4" onClick={() => setIsEventModalOpen(true)}>Manage programmes</button><button className="min-h-11 px-3 text-sm font-semibold text-emerald-800 underline underline-offset-4" onClick={exportBackup}>Export backup</button><label className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-semibold text-emerald-800 underline underline-offset-4">Import backup<input type="file" accept="application/json,.json" className="sr-only" onChange={e => { importBackup(e.target.files?.[0]); e.target.value = ""; }} /></label></>}
         </div>
-
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <button
-            type="button"
-            onClick={() => navigateTo("dashboard")}
-            className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
-              view === "dashboard"
-                ? "bg-[#0F472A] text-[#A3E635]"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            Dashboard
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigateTo("directory")}
-            className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
-              view === "directory"
-                ? "bg-[#0F472A] text-[#A3E635]"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            Directory ({activeAttendees.length})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigateTo("attendance")}
-            className={`px-2.5 py-1 rounded-md font-semibold transition-colors flex items-center gap-1.5 ${
-              view === "attendance"
-                ? "bg-[#0F472A] text-[#A3E635]"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Usher Mobile Desk</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigateTo("register")}
-            className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
-              view === "register"
-                ? "bg-[#0F472A] text-[#A3E635]"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            Public Register
-          </button>
-
-          {/* Backup Snapshot Export & Import Pills */}
-          <button
-            type="button"
-            onClick={handleExportBackup}
-            title="Download full JSON database snapshot backup"
-            className="p-1 text-slate-400 hover:text-[#A3E635] transition-colors ml-1"
-          >
-            <Download className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={handleImportBackup}
-            title="Restore database snapshot from JSON file"
-            className="p-1 text-slate-400 hover:text-emerald-300 transition-colors"
-          >
-            <Upload className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Reset Demo Data Pill */}
-          <button
-            type="button"
-            onClick={handleResetData}
-            title="Reset platform demo data"
-            className="p-1 text-slate-500 hover:text-slate-300 transition-colors ml-1"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Main View Router */}
-      {view === "dashboard" && (
-        <Dashboard
-          onRegisterClick={() => navigateTo("register")}
-          onDirectoryClick={() => navigateTo("directory")}
-          onSessionsClick={() => navigateTo("attendance")}
-          onOpenEventModal={() => setIsEventModalOpen(true)}
-          activeEventName={activeEvent.title}
-          activeEventTheme={activeEvent.theme}
-          activeEventMonthYear={activeEvent.monthYear}
-          totalRegistrations={activeAttendees.length}
-          ordainedCount={ordainedCount}
-          attendeesData={activeAttendees}
-          sessionsData={activeEvent.sessions}
-          onUpdateSession={handleUpdateSession}
-        />
-      )}
-
-      {view === "directory" && (
-        <AdminDirectory
-          onBackToDashboard={() => navigateTo("dashboard")}
-          onOpenRegister={() => navigateTo("register")}
-          onOpenSessionAttendance={() => navigateTo("attendance")}
-          activeEventName={activeEvent.title}
-          attendeesData={activeAttendees}
-          sessionsData={activeEvent.sessions}
-          onToggleSession={handleToggleAttendance}
-          onUpdateParticipant={handleUpdateParticipant}
-        />
-      )}
-
-      {view === "attendance" && (
-        <MultiSessionAttendance
-          onBackToDashboard={() => navigateTo("dashboard")}
-          onOpenDirectory={() => navigateTo("directory")}
-          onOpenRegister={() => navigateTo("register")}
-          activeEventName={activeEvent.title}
-          activeEventId={activeEvent.id}
-          rosterData={activeAttendees}
-          sessionsData={activeEvent.sessions}
-          onToggleAttendance={handleToggleAttendance}
-          onUpdateSession={handleUpdateSession}
-        />
-      )}
-
-      {view === "register" && (
-        <RegistrationFlow
-          onBackToDashboard={() => navigateTo("dashboard")}
-          activeEventName={activeEvent.title}
-          activeEventId={activeEvent.id}
-          activeEventMonthYear={activeEvent.monthYear}
-          activeEventTheme={activeEvent.theme}
-          activeEventDates={formatEventFullDateRange(
-            activeEvent.startDate,
-            activeEvent.endDate,
-            activeEvent.monthYear
-          )}
-          existingParticipants={platformState.participants}
-          churchesList={registeredChurches}
-          onAddNewChurch={handleAddNewChurch}
-          onParticipantRegistered={handleRegisterParticipant}
-        />
-      )}
-
-      {/* Monthly Events Switcher & Creator Modal */}
-      <EventModal
-        isOpen={isEventModalOpen}
-        onClose={() => setIsEventModalOpen(false)}
-        events={dynamicEvents}
-        activeEventId={platformState.activeEventId}
-        onSelectEvent={handleSelectEvent}
-        onCreateEvent={handleCreateEvent}
-        onUpdateEvent={handleUpdateEvent}
-      />
-    </div>
-  );
+        <fieldset disabled={saving} className="contents" aria-busy={saving}>
+          {effectiveView === "dashboard" && <Dashboard onRegisterClick={() => navigate("register")} onDirectoryClick={() => navigate("directory")} onSessionsClick={() => navigate("attendance")} onOpenEventModal={() => setIsEventModalOpen(true)} activeEventName={activeEvent.title} activeEventTheme={activeEvent.theme} activeEventMonthYear={activeEvent.monthYear} totalRegistrations={attendees.length} ordainedCount={attendees.filter(p => p.isOrdained).length} attendeesData={attendees} sessionsData={activeEvent.sessions} onUpdateSession={updateSession} />}
+          {effectiveView === "directory" && <AdminDirectory onBackToDashboard={() => navigate("dashboard")} onOpenRegister={() => navigate("register")} onOpenSessionAttendance={() => navigate("attendance")} activeEventName={activeEvent.title} attendeesData={attendees} sessionsData={activeEvent.sessions} onToggleSession={toggleAttendance} onUpdateParticipant={(participantId: string, data: Partial<StoredParticipant>) => void mutate({ type: "participant.update", participantId, data })} />}
+          {effectiveView === "attendance" && <MultiSessionAttendance onBackToDashboard={() => navigate(isAdmin ? "dashboard" : "account")} onOpenDirectory={() => navigate("directory")} onOpenRegister={() => navigate("register")} activeEventName={activeEvent.title} activeEventId={activeEvent.id} rosterData={attendees} sessionsData={activeEvent.sessions} onToggleAttendance={toggleAttendance} onUpdateSession={isAdmin ? updateSession : undefined} canManage={isAdmin} />}
+          {isAdmin && <EventModal isOpen={isEventModalOpen} onClose={() => setIsEventModalOpen(false)} events={events.map(event => ({ ...event, registeredCount: state.registrations.filter(r => r.eventId === event.id).length }))} activeEventId={activeEvent.id} onSelectEvent={id => { setEventId(id); void mutate({ type: "event.select", eventId: id }); }} onCreateEvent={data => void mutate({ type: "event.create", data })} onUpdateEvent={data => void mutate({ type: "event.update", eventId: data.id, data })} />}
+        </fieldset>
+      </>}
+  </div>;
 }

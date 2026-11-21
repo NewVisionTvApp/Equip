@@ -1,6 +1,18 @@
 import { sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
+export const platformSyncState = sqliteTable("platform_sync_state", {
+  id: text("id").primaryKey(),
+  stateJson: text("state_json").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export const requestLimits = sqliteTable("request_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+});
+
 /* =========================================================================
    1. BETTER AUTH CORE TABLES (Managed by Better Auth on Cloudflare D1)
    ========================================================================= */
