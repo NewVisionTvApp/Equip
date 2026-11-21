@@ -3,10 +3,11 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema.ts";
 
-export function createAuth(d1Database: D1Database, secret?: string) {
+export function createAuth(d1Database: D1Database, secret?: string, baseURL?: string) {
   const db = drizzle(d1Database, { schema });
 
   return betterAuth({
+    baseURL,
     database: drizzleAdapter(db, {
       provider: "sqlite",
       schema: {
@@ -27,6 +28,7 @@ export function createAuth(d1Database: D1Database, secret?: string) {
           type: "string",
           required: false,
           defaultValue: "attendee",
+          input: false,
         },
       },
     },

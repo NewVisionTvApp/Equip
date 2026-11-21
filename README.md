@@ -32,7 +32,9 @@ The build produces `dist/`, configured as `assets.directory` in `wrangler.jsonc`
 
 For local frontend development, use `pnpm dev`. After an approved frontend build, `pnpm worker:dev` serves the Worker and its assets locally. Regenerate binding declarations with `pnpm cf:types` after changing Wrangler bindings.
 
-Shared attendance requires a D1 database bound as `DB`. Authentication also requires the `BETTER_AUTH_SECRET` runtime secret and the existing database migrations. The connected Worker currently has no bindings, and no database named `equip-db` was found. Database creation, binding configuration, and schema migration remain pending separate approval. Until configured, these APIs return HTTP 503; sync writes are never acknowledged as saved without a database. Never put secret values in the repository.
+Shared attendance uses the dedicated D1 database `equip-db`, bound as `DB` in `wrangler.jsonc`. Authentication uses the `BETTER_AUTH_SECRET` runtime secret stored in Cloudflare and the configured `BETTER_AUTH_URL`. Schema migrations live in `drizzle/migrations`; apply new migrations with `pnpm db:migrate:prod` only with approval. Missing backend configuration returns HTTP 503. Never put secret values in the repository or share them in chat.
+
+For local Worker login tests, set `BETTER_AUTH_URL=http://localhost:8787` and a local-only `BETTER_AUTH_SECRET` in ignored `.dev.vars`. The D1 binding uses a local database by default; apply migrations with `pnpm db:migrate:local`. Run `pnpm test` for synthetic registration, sync, and authentication checks.
 
 The installed Wrangler 3 version supports Workers Logs, which are enabled. Its schema does not support the newer traces setting; adding traces requires a separate Wrangler upgrade.
 

@@ -4,6 +4,17 @@
   "main": "src/worker.ts",
   "compatibility_date": "2024-11-01",
   "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "BETTER_AUTH_URL": "https://equip.app-f19.workers.dev"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "equip-db",
+      "database_id": "e9246976-f995-45a2-b2a1-0eee4f917767",
+      "migrations_dir": "drizzle/migrations"
+    }
+  ],
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
