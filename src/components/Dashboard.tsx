@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -22,97 +22,25 @@ import {
   Pencil,
   Camera,
 } from "lucide-react";
-import { SEED_PARTICIPANTS } from "@/db/seed-data";
-import { SessionConfig, isAudioMuted, setAudioMuted } from "@/lib/store";
+import { createDefaultSessions, isAudioMuted, setAudioMuted, type AttendeeViewRecord, type EquipEvent, type SessionConfig } from "@/lib/store";
+import { getDashboardMetrics } from "@/lib/dashboard-metrics";
 import EditSessionModal from "./EditSessionModal";
 import CameraScannerModal from "./CameraScannerModal";
-
-// The 5 Gathering Sessions
-const SESSIONS = [
-  {
-    key: "mon_am",
-    name: "Keynote Impartation & Vision Casting",
-    short: "Mon AM",
-    day: "Day 1 · Morning",
-    time: "09:00 AM – 12:30 PM",
-    speaker: "Apostle J. Mensah",
-    hall: "Main Auditorium",
-    checkedIn: 148,
-    total: 184,
-    percent: 80,
-    status: "Completed",
-  },
-  {
-    key: "mon_pm",
-    name: "Evening Anointing & Deliverance Plenary",
-    short: "Mon PM",
-    day: "Day 1 · Evening",
-    time: "05:30 PM – 08:30 PM",
-    speaker: "Bishop David O.",
-    hall: "Main Auditorium",
-    checkedIn: 162,
-    total: 184,
-    percent: 88,
-    status: "Active Now",
-  },
-  {
-    key: "tue_am",
-    name: "Pastoral Governance & Ministry Ethics",
-    short: "Tue AM",
-    day: "Day 2 · Morning",
-    time: "09:00 AM – 12:30 PM",
-    speaker: "Rev. Dr. Grace E.",
-    hall: "Synod Hall A",
-    checkedIn: 154,
-    total: 184,
-    percent: 84,
-    status: "Upcoming",
-  },
-  {
-    key: "tue_pm",
-    name: "Signs, Wonders & Leadership Mantle",
-    short: "Tue PM",
-    day: "Day 2 · Evening",
-    time: "05:30 PM – 08:30 PM",
-    speaker: "Pastor Samuel K.",
-    hall: "Main Auditorium",
-    checkedIn: 170,
-    total: 184,
-    percent: 92,
-    status: "Upcoming",
-  },
-  {
-    key: "wed_am",
-    name: "Final Mantle Impartation & Commissioning",
-    short: "Wed AM",
-    day: "Day 3 · Morning",
-    time: "09:00 AM – 01:00 PM",
-    speaker: "Presiding Apostolic Council",
-    hall: "Main Auditorium",
-    checkedIn: 178,
-    total: 184,
-    percent: 97,
-    status: "Upcoming",
-  },
-];
-
-// Delegation breakdown
-const DELEGATIONS = [
-  { name: "Charismatic Renaissance (Host)", count: 68, dot: "bg-[#0F472A]", type: "Host Ministry" },
-];
 
 interface DashboardProps {
   onRegisterClick?: () => void;
   onDirectoryClick?: () => void;
   onSessionsClick?: () => void;
   onOpenEventModal?: () => void;
-  activeEventName?: string;
-  activeEventTheme?: string;
-  activeEventMonthYear?: string;
-  totalRegistrations?: number;
-  ordainedCount?: number;
-  attendeesData?: any[];
+  activeEventTheme: string;
+  activeEventMonthYear: string;
+  activeEventStatus: EquipEvent["status"];
+  activeEventDates: string;
+  adminName: string;
+  adminEmail: string;
+  attendeesData: AttendeeViewRecord[];
   sessionsData?: SessionConfig[];
+  onToggleAttendance: (participantId: string, sessionKey: SessionConfig["key"]) => void;
   onUpdateSession?: (sessionKey: string, sessionData: Partial<SessionConfig>) => void;
 }
 
@@ -121,16 +49,19 @@ export default function Dashboard({
   onDirectoryClick,
   onSessionsClick,
   onOpenEventModal,
-  activeEventTheme = "Apostolic Mantles & Spiritual Leadership",
-  activeEventMonthYear = "November 2026",
-  totalRegistrations,
-  ordainedCount,
+  activeEventTheme,
+  activeEventMonthYear,
+  activeEventStatus,
+  activeEventDates,
+  adminName,
+  adminEmail,
   attendeesData,
   sessionsData,
+  onToggleAttendance,
   onUpdateSession,
 }: DashboardProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSessionKey, setSelectedSessionKey] = useState("mon_pm");
+  const [selectedSessionKey, setSelectedSessionKey] = useState<SessionConfig["key"]>("mon_am");
   const [activeFilterTab, setActiveFilterTab] = useState<"all" | "pastors" | "members" | "checked_in">("all");
   const [fastScanId, setFastScanId] = useState("");
   const [scanFeedback, setScanFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -145,97 +76,23 @@ export default function Dashboard({
     setAudioMuted(next);
   };
 
-  // Attendees State with initial realistic statuses (using attendeesData when available)
-  const [attendees, setAttendees] = useState(() =>
-    attendeesData && attendeesData.length > 0
-      ? attendeesData.map((a, idx) => ({
-          ...a,
-          checkedIn: idx < 7,
-          checkedInAt: idx < 7 ? `08:${40 + (idx * 3)} AM` : null,
-        }))
-      : SEED_PARTICIPANTS.map((p, idx) => ({
-          ...p,
-          checkedIn: idx < 7,
-          checkedInAt: idx < 7 ? `08:${40 + (idx * 3)} AM` : null,
-          isOrdained:
-            p.roleOffice.toLowerCase().includes("pastor") ||
-            p.roleOffice.toLowerCase().includes("bishop") ||
-            p.roleOffice.toLowerCase().includes("reverend") ||
-            p.roleOffice.toLowerCase().includes("minister") ||
-            p.roleOffice.toLowerCase().includes("apostle"),
-        }))
-  );
-
-  useEffect(() => {
-    if (attendeesData && attendeesData.length > 0) {
-      setAttendees(attendeesData.map((a, idx) => ({
-        ...a,
-        checkedIn: a.checkedIn ?? (a.sessions?.mon_pm || idx < 7),
-        checkedInAt: a.checkedInAt ?? a.sessionTimes?.mon_pm ?? (idx < 7 ? `08:${40 + (idx * 3)} AM` : null),
-      })));
-    }
-  }, [attendeesData]);
-
-  // Active Session Object (dynamically reflects admin configured preachers & topics)
-  const sessionList = useMemo(() => {
-    if (sessionsData && sessionsData.length > 0) {
-      return sessionsData.map((s, idx) => {
-        const matchingSeed = SESSIONS[idx] || SESSIONS[0];
-        return {
-          ...matchingSeed,
-          ...s,
-        };
-      });
-    }
-    return SESSIONS;
-  }, [sessionsData]);
+  const sessionList = useMemo(() => sessionsData?.length ? sessionsData : createDefaultSessions(), [sessionsData]);
 
   const currentSession = useMemo(
-    () => sessionList.find((s) => s.key === selectedSessionKey) || sessionList[1],
+    () => sessionList.find((s) => s.key === selectedSessionKey) || sessionList[0],
     [sessionList, selectedSessionKey]
   );
-
-  // Dynamic delegation counts from registered attendees
-  const delegationsList = useMemo(() => {
-    const counts: Record<string, number> = {};
-    attendees.forEach((a) => {
-      counts[a.churchName] = (counts[a.churchName] || 0) + 1;
-    });
-
-    const dots = ["bg-[#0F472A]", "bg-[#166534]", "bg-[#84CC16]", "bg-emerald-500", "bg-lime-600"];
-    const entries = Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, count], idx) => ({
-        name,
-        count,
-        dot: dots[idx % dots.length],
-        type: name.includes("Host") ? "Host Ministry" : "Visiting Delegation",
-      }));
-
-    return entries.length > 0 ? entries : DELEGATIONS;
-  }, [attendees]);
-
-  // 5-Session Turnout Overview across all sessions
-  const sessionTurnoutStats = useMemo(() => {
-    const sessionKeys: { key: string; label: string; name: string }[] = [
-      { key: "mon_am", label: "Mon AM", name: "Session 1" },
-      { key: "mon_pm", label: "Mon PM", name: "Session 2" },
-      { key: "tue_am", label: "Tue AM", name: "Session 3" },
-      { key: "tue_pm", label: "Tue PM", name: "Session 4" },
-      { key: "wed_am", label: "Wed AM", name: "Session 5" },
-    ];
-
-    return sessionKeys.map((s) => {
-      const count = attendees.filter((a) => {
-        const att = a.attendance || a.sessions;
-        return Boolean(att?.[s.key] || (s.key === "mon_pm" && a.checkedIn));
-      }).length;
-      return {
-        ...s,
-        count,
-      };
-    });
-  }, [attendees]);
+  const attendees = useMemo(() => attendeesData.map(a => ({
+    ...a,
+    checkedIn: a.sessions[currentSession.key],
+    checkedInAt: a.sessionTimes[currentSession.key],
+  })), [attendeesData, currentSession.key]);
+  const { totalRegistrations, ordainedCount, membersCount, checkedInCount, checkedInMinisters, checkedInDelegates, delegations, sessionTurnoutStats } = useMemo(
+    () => getDashboardMetrics(attendeesData, sessionList, currentSession.key),
+    [attendeesData, sessionList, currentSession.key]
+  );
+  const delegationDots = ["bg-[#0F472A]", "bg-[#166534]", "bg-[#84CC16]", "bg-emerald-500", "bg-lime-600"];
+  const eventStatusLabel = activeEventStatus[0].toUpperCase() + activeEventStatus.slice(1);
 
   // Subtle Apple Audio feedback (synthesized lightweight pop)
   const playHapticAudio = () => {
@@ -283,21 +140,7 @@ export default function Dashboard({
     setRecentlyToggledId(id);
     setTimeout(() => setRecentlyToggledId(null), 800);
 
-    setAttendees((prev) =>
-      prev.map((a) => {
-        if (a.id === id) {
-          const newStatus = !a.checkedIn;
-          return {
-            ...a,
-            checkedIn: newStatus,
-            checkedInAt: newStatus
-              ? new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-              : null,
-          };
-        }
-        return a;
-      })
-    );
+    onToggleAttendance(id, currentSession.key);
   };
 
   // Fast Door Scan verification logic
@@ -379,8 +222,7 @@ export default function Dashboard({
     document.body.removeChild(link);
   };
 
-  const checkedInCount = currentSession.checkedIn;
-  const maxSessionCheckedIn = Math.max(...SESSIONS.map((s) => s.checkedIn), 1);
+  const maxSessionCheckedIn = Math.max(...sessionTurnoutStats.map(s => s.count), 1);
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] bg-[radial-gradient(ellipse_100%_40%_at_50%_-10%,rgba(16,185,129,0.06),transparent)] text-slate-900 flex p-4 lg:p-6 gap-6 font-sans antialiased selection:bg-[#A3E635] selection:text-[#0F472A]">
@@ -425,7 +267,7 @@ export default function Dashboard({
                   <span>Attendees</span>
                 </div>
                 <span className="text-[11px] font-bold bg-slate-100/90 text-slate-600 px-2 py-0.5 rounded-full group-hover:bg-slate-200/80 transition-colors">
-                  184
+                  {totalRegistrations}
                 </span>
               </button>
 
@@ -436,10 +278,10 @@ export default function Dashboard({
               >
                 <div className="flex items-center gap-3">
                   <Calendar className="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors" />
-                  <span>5 Sessions</span>
+                  <span>{sessionList.length} Sessions</span>
                 </div>
                 <span className="text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2 py-0.5 rounded-md">
-                  Active
+                  {eventStatusLabel}
                 </span>
               </button>
 
@@ -556,7 +398,7 @@ export default function Dashboard({
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
               </span>
-              <span>3 Terminals Synced</span>
+              <span>Programme records synced</span>
             </div>
 
             <button
@@ -570,11 +412,11 @@ export default function Dashboard({
 
             <div className="flex items-center gap-3 pl-2 border-l border-slate-200/60">
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#0F472A] to-[#166534] text-[#A3E635] flex items-center justify-center text-xs font-bold shadow-xs ring-2 ring-emerald-50">
-                PA
+                {adminName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase()}
               </div>
               <div className="hidden sm:flex flex-col text-left">
-                <span className="text-xs font-bold text-slate-900 leading-tight">Pastor Admin</span>
-                <span className="text-[11px] text-slate-400">admin@equipchurch.org</span>
+                <span className="text-xs font-bold text-slate-900 leading-tight">{adminName}</span>
+                <span className="text-[11px] text-slate-400">{adminEmail}</span>
               </div>
             </div>
           </div>
@@ -602,7 +444,7 @@ export default function Dashboard({
               <span>Theme: <strong className="text-slate-800">{activeEventTheme}</strong></span>
               <span className="text-slate-300">·</span>
               <span className="text-[#0F472A] font-bold bg-lime-100 border border-lime-200 px-2.5 py-0.5 rounded-md text-xs">
-                Mon, Nov 23 – Wed, Nov 25, 2026 (3 Days · 5 Sessions)
+                {activeEventDates} (3 Days · {sessionList.length} Sessions)
               </span>
             </div>
           </div>
@@ -662,11 +504,11 @@ export default function Dashboard({
 
             <div className="flex flex-col gap-1 z-10">
               <span className="text-3xl font-extrabold text-white tracking-[-0.04em] tabular-nums">
-                {totalRegistrations !== undefined ? totalRegistrations : 184}
+                {totalRegistrations}
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="bg-[#A3E635] text-[#0F472A] text-[10px] font-black px-1.5 py-0.5 rounded shadow-2xs">
-                  Active
+                  {eventStatusLabel}
                 </span>
                 <span className="text-[11px] text-[#DCFCE7] font-medium">Programme Roster</span>
               </div>
@@ -683,11 +525,11 @@ export default function Dashboard({
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-3xl font-extrabold text-slate-900 tracking-[-0.04em] tabular-nums">
-                {ordainedCount !== undefined ? ordainedCount : 72}
+                {ordainedCount}
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                  {ordainedCount ?? 72} Ministers
+                  {ordainedCount} Ministers
                 </span>
                 <span className="text-[11px] text-slate-400">Bishops, Apostles & Pastors</span>
               </div>
@@ -704,11 +546,11 @@ export default function Dashboard({
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-3xl font-extrabold text-slate-900 tracking-[-0.04em] tabular-nums">
-                112
+                {membersCount}
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                  8 Churches
+                  {delegations.length} Churches
                 </span>
                 <span className="text-[11px] text-slate-400">Host & visiting delegations</span>
               </div>
@@ -725,11 +567,11 @@ export default function Dashboard({
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-3xl font-extrabold text-slate-900 tracking-[-0.04em] tabular-nums">
-                {currentSession.checkedIn}
+                {checkedInCount}
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                  {currentSession.checkedIn} Present
+                  {checkedInCount} Present
                 </span>
                 <span className="text-[11px] text-emerald-700 font-medium">Verified at doors</span>
               </div>
@@ -744,13 +586,13 @@ export default function Dashboard({
             <div className="flex justify-between items-center">
               <span className="text-sm font-bold text-slate-900 tracking-tight">Session Attendance</span>
               <span className="text-[11px] font-bold text-[#166534] bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md">
-                5 Sessions
+                {sessionList.length} Sessions
               </span>
             </div>
 
             {/* Pillar Capsules with Spring Hover Lifts */}
             <div className="flex items-end justify-between px-2 pt-2 h-44">
-              {SESSIONS.map((s) => {
+              {sessionTurnoutStats.map((s) => {
                 const isSelected = selectedSessionKey === s.key;
                 return (
                   <button
@@ -766,7 +608,7 @@ export default function Dashboard({
                     {isSelected && (
                       <div className="absolute -top-7 flex flex-col items-center animate-in zoom-in-75 duration-200 ease-apple-bounce">
                         <span className="text-[10px] font-extrabold bg-[#0F472A] text-white px-2 py-0.5 rounded-full shadow-xs whitespace-nowrap">
-                          {s.checkedIn} Present
+                          {s.count} Present
                         </span>
                         <div className="w-1.5 h-1.5 bg-[#0F472A] rotate-45 -mt-0.5" />
                       </div>
@@ -778,11 +620,9 @@ export default function Dashboard({
                         className={`w-full rounded-full transition-all duration-500 ease-apple-spring ${
                           isSelected
                             ? "bg-[#0F472A] shadow-xs"
-                            : s.status === "Completed"
-                            ? "bg-[#166534]/70"
                             : "bg-[#84CC16]/70"
                         }`}
-                        style={{ height: `${Math.round((s.checkedIn / maxSessionCheckedIn) * 80 + 20)}%` }}
+                        style={{ height: `${Math.round(s.count / maxSessionCheckedIn * 100)}%` }}
                       />
                     </div>
 
@@ -804,7 +644,7 @@ export default function Dashboard({
             <div className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  CURRENT SESSION
+                  SELECTED SESSION
                 </span>
                 <button
                   type="button"
@@ -838,7 +678,7 @@ export default function Dashboard({
                 className="w-full h-9 bg-[#0F472A] hover:bg-[#165A36] active:scale-[0.97] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all duration-150 ease-apple-spring shadow-xs"
               >
                 <Play className="w-3.5 h-3.5 fill-white" />
-                <span>Launch Session 2 Check-in</span>
+                <span>Open attendance desk</span>
               </button>
             </div>
           </div>
@@ -848,15 +688,16 @@ export default function Dashboard({
             <div className="flex justify-between items-center">
               <span className="text-sm font-bold text-slate-900 tracking-tight">Delegations</span>
               <span className="text-[11px] font-bold text-[#0F472A] bg-lime-100 border border-lime-200/60 px-2 py-0.5 rounded-md">
-                {delegationsList.length} Churches
+                {delegations.length} Churches
               </span>
             </div>
 
             <div className="flex flex-col gap-3 my-auto">
-              {delegationsList.slice(0, 4).map((c) => (
+              {delegations.length === 0 && <p className="text-xs text-slate-500">No registrations yet.</p>}
+              {delegations.slice(0, 4).map((c, index) => (
                 <div key={c.name} className="flex items-center justify-between text-xs group cursor-pointer hover:translate-x-0.5 transition-transform duration-150">
                   <div className="flex items-center gap-2 truncate pr-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${c.dot} shrink-0 group-hover:scale-125 transition-transform duration-200`} />
+                    <span className={`w-2.5 h-2.5 rounded-full ${delegationDots[index % delegationDots.length]} shrink-0 group-hover:scale-125 transition-transform duration-200`} />
                     <span className="font-semibold text-slate-700 truncate">{c.name}</span>
                   </div>
                   <span className="font-bold text-slate-900 tabular-nums shrink-0">{c.count}</span>
@@ -865,7 +706,7 @@ export default function Dashboard({
             </div>
 
             <span className="text-[11px] text-slate-400 font-medium text-center border-t border-slate-100 pt-2">
-              {totalRegistrations ?? attendees.length} Total Registered Attendees
+              {totalRegistrations} Total Registered Attendees
             </span>
           </div>
         </section>
@@ -1005,12 +846,12 @@ export default function Dashboard({
             {/* Ministerial & Delegate Breakdown without Cap */}
             <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
               <div className="flex flex-col">
-                <span className="font-extrabold text-slate-800 font-mono text-sm">{ordainedCount ?? 72}</span>
+                <span className="font-extrabold text-slate-800 font-mono text-sm">{checkedInMinisters}</span>
                 <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Ministers</span>
               </div>
               <div className="h-6 w-px bg-slate-200" />
               <div className="flex flex-col text-right">
-                <span className="font-extrabold text-slate-800 font-mono text-sm">112</span>
+                <span className="font-extrabold text-slate-800 font-mono text-sm">{checkedInDelegates}</span>
                 <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Delegates</span>
               </div>
             </div>
@@ -1020,7 +861,7 @@ export default function Dashboard({
           <div className="lg:col-span-4 bg-gradient-to-br from-[#0B3A23] via-[#0D3821] to-[#041D11] text-white rounded-2xl p-5 flex flex-col justify-between h-72 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring relative overflow-hidden border border-emerald-900/40 ring-1 ring-inset ring-white/10 group">
             <div className="flex justify-between items-center z-10">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-emerald-300 tracking-tight">5-Session Programme Turnout</span>
+                <span className="text-xs font-bold text-emerald-300 tracking-tight">{sessionList.length}-Session Programme Turnout</span>
                 <span className="text-[10px] font-extrabold bg-[#A3E635] text-[#0F472A] px-1.5 py-0.2 rounded-full">
                   Live
                 </span>
@@ -1035,7 +876,7 @@ export default function Dashboard({
                   className="flex items-center justify-between text-xs py-1 px-2.5 rounded-lg bg-white/5 border border-white/5"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-[#A3E635] text-[11px]">{s.label}</span>
+                    <span className="font-extrabold text-[#A3E635] text-[11px]">{s.short}</span>
                     <span className="font-medium text-emerald-100 text-xs truncate max-w-[170px]">{s.name}</span>
                   </div>
                   <span className="font-mono text-xs text-[#A3E635] font-extrabold tabular-nums bg-black/30 px-2 py-0.5 rounded-md border border-white/10 shrink-0">

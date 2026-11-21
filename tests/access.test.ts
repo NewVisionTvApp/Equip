@@ -76,6 +76,34 @@ test("Attendees can only read and edit their linked participant profile", async 
   } finally { f.close(); }
 });
 
+test("Registration creates a pass, while an optional attendee account links to it later", async () => {
+  const f = fixture();
+  try {
+    const event = await eventId(f);
+    const admin = await f.signup("desk-admin@example.invalid", "admin");
+    const first = await f.request("/api/public/register", "POST", { ...profile(), eventId: event }, admin.cookie);
+    const second = await f.request("/api/public/register", "POST", { ...profile("+2348000000002"), fullName: "Second Synthetic Member", eventId: event }, admin.cookie);
+    assert.equal(first.status, 200);
+    assert.equal(second.status, 200);
+    const participant = (await first.json()).participant;
+    assert.match(participant.id, /^EQ-/);
+    assert.equal(participant.userId, undefined);
+    assert.equal((await second.json()).participant.userId, undefined);
+    assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS count FROM user").get().count, 1);
+    assert.equal((await (await f.request("/api/me", "GET", undefined, admin.cookie)).json()).participant, null);
+
+    const attendee = await f.signup("new-attendee@example.invalid");
+    assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS count FROM user").get().count, 2);
+    assert.equal((await (await f.request("/api/me", "GET", undefined, attendee.cookie)).json()).participant, null);
+    const linked = await f.request("/api/me/link", "POST", { id: participant.id, phone: "+2348000000001" }, attendee.cookie);
+    assert.equal(linked.status, 200, await linked.clone().text());
+    const records = await linked.json();
+    assert.equal(records.participant.id, participant.id);
+    assert.equal(records.registrations.length, 1);
+    assert.equal((await f.request("/api/sync", "GET", undefined, attendee.cookie)).status, 403);
+  } finally { f.close(); }
+});
+
 test("Ushers can register walk-ins and set attendance but cannot change events, profiles, or access", async () => {
   const f = fixture();
   try {
