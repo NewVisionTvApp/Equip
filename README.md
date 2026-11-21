@@ -14,27 +14,29 @@ Maintained independently in this repository, decoupled from New Vision TV.
   - Day 1 (Monday): Morning & Evening
   - Day 2 (Tuesday): Morning & Evening
   - Day 3 (Wednesday): Afternoon
-- **Zero Cost & Continuous Uptime:** Built on Cloudflare Pages and D1 (relational SQLite) with zero database sleep or pausing issues between monthly events.
+- **Hosting & Persistence:** Built for Cloudflare Workers with static assets and D1 (relational SQLite).
 
 ---
 
 ## Cloudflare deployment
 
-This application targets **Cloudflare Pages**, including the API routes in `functions/`. Its Wrangler configuration uses `pages_build_output_dir`; do not add the Workers-only `assets` setting, which causes Pages deployment validation to fail.
+This application targets the existing **Cloudflare Worker named `equip`**. `src/worker.ts` handles `/api/sync` and `/api/auth/*`, and serves the Vite frontend through the `ASSETS` binding. SPA fallback supports direct links such as `/register`, `/attendance`, and `/directory`. Unknown API paths return JSON 404 responses.
 
-For an existing Pages project connected to GitHub, use:
+In the Worker's GitHub build settings, use:
 
 - Root directory: repository root
 - Build command: `pnpm run build`
-- Build output directory: `dist`
+- Deploy command: `pnpm run deploy` (runs the project's installed `wrangler deploy`)
 
-Pages Git integration handles deployment after the build. If using an existing CI pipeline with a separate deploy command, use `pnpm exec wrangler pages deploy dist --project-name equip` and ensure `equip` matches the existing Pages project name. Its CI credentials must have permission to deploy to Pages.
+The build produces `dist/`, configured as `assets.directory` in `wrangler.jsonc`. The previous `wrangler pages deploy dist` command targets a different product; this account has an `equip` Worker and no Pages project. Use a Workers deployment token for the intended account.
 
-A build log showing a separate user deploy command may come from Workers Builds. Check which Cloudflare project is connected to GitHub. Changing the command to `wrangler deploy` would require migrating the Pages Functions; it is not a fix for this configuration error.
+For local frontend development, use `pnpm dev`. After an approved frontend build, `pnpm worker:dev` serves the Worker and its assets locally. Regenerate binding declarations with `pnpm cf:types` after changing Wrangler bindings.
 
-Before deploying, reconcile the existing Pages project's runtime settings with `wrangler.jsonc`, including its D1 binding named `DB` for authentication and shared attendance data, and its `BETTER_AUTH_SECRET` secret. No production database identifier is currently recorded in the config. Do not substitute a guessed identifier or create a replacement database.
+Shared attendance requires a D1 database bound as `DB`. Authentication also requires the `BETTER_AUTH_SECRET` runtime secret and the existing database migrations. The connected Worker currently has no bindings, and no database named `equip-db` was found. Database creation, binding configuration, and schema migration remain pending separate approval. Until configured, these APIs return HTTP 503; sync writes are never acknowledged as saved without a database. Never put secret values in the repository.
 
-References: [Pages Wrangler configuration](https://developers.cloudflare.com/pages/functions/wrangler-configuration/) and [Workers Builds settings](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/).
+The installed Wrangler 3 version supports Workers Logs, which are enabled. Its schema does not support the newer traces setting; adding traces requires a separate Wrangler upgrade.
+
+References: [Pages to Workers migration](https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/), [static asset configuration](https://developers.cloudflare.com/workers/static-assets/binding/), and [Workers Builds settings](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/).
 
 ## Documentation
 - [AGENTS.md](file:///c:/Users/DELL/Equip/AGENTS.md): Agent routing and core rules.

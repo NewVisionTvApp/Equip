@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test tests/verification.test.ts",
-    "pages:dev": "wrangler pages dev --d1 DB=equip-db --compatibility-date 2024-11-01",
+    "test": "node --test tests/verification.test.ts tests/worker.test.ts",
+    "worker:dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "cf:types": "wrangler types src/worker-configuration.d.ts",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply equip-db --local",
