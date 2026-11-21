@@ -10,11 +10,20 @@ build/
 out/
 .next/
 
-# Cloudflare & Wrangler Local Runtime
+# Cloudflare & Wrangler Local Runtime & Config
 .wrangler/
 .mf/
 .dev.vars
 .dev.vars.local
+wrangler.jsonc
+wrangler.json
+wrangler.toml
+
+# Internal Project Specs & Private Documentation
+docs/
+AGENTS.md
+STATUS.md
+TASKS.md
 
 # Databases & SQLite Local Stores
 *.sqlite
