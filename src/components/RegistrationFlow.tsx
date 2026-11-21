@@ -72,11 +72,7 @@ export default function RegistrationFlow({
   // Available churches derived from database + props
   const availableChurches = useMemo(() => {
     const set = new Set<string>([
-      "Grace Covenant Sanctuary (Host)",
-      "Faith Apostolic Church",
-      "Living Streams Assembly",
-      "Redeemed Glory Center",
-      "Christ Ambassadors Fellowship",
+      "Charismatic Renaissance International Church (Host)",
     ]);
 
     if (churchesList && churchesList.length > 0) {
@@ -93,9 +89,9 @@ export default function RegistrationFlow({
     email: "",
     roleType: "pastor" as "pastor" | "member",
     roleOffice: "Senior Pastor",
-    churchName: "Grace Covenant Sanctuary (Host)",
+    churchName: "Charismatic Renaissance International Church (Host)",
     customChurch: "",
-    location: "Lagos Central",
+    location: "Yenagoa, Bayelsa State",
   });
 
   // Returning lookup state
@@ -561,7 +557,7 @@ export default function RegistrationFlow({
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="e.g. Lagos Central, Ikeja, Ibadan"
+                  placeholder="e.g. Yenagoa, Bayelsa State"
                   className="w-full h-11 pl-10 pr-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all duration-150 ease-apple-spring"
                 />
               </div>

@@ -510,7 +510,7 @@ describe("Equip 3.0 Verification Test Suite (Phase 5)", () => {
         participants: { "EQ-82914": mockParticipant },
         registrations: [{ id: "reg_1", participantId: "EQ-82914", eventId: "2026-11-EQUIP", registeredAt: new Date().toISOString() }],
         attendance: {},
-        churches: ["Grace Covenant Sanctuary (Host)"],
+        churches: ["Charismatic Renaissance International Church (Host)"],
       };
 
       // Apply update
@@ -542,7 +542,7 @@ describe("Equip 3.0 Verification Test Suite (Phase 5)", () => {
         participants: { "EQ-TEST1": { id: "EQ-TEST1", fullName: "Test Delegate" } },
         registrations: [{ id: "reg_1", participantId: "EQ-TEST1", eventId: "2026-11-EQUIP" }],
         attendance: { "EQ-TEST1_2026-11-EQUIP_mon_am": { attended: true, timestamp: "08:45 AM" } },
-        churches: ["Grace Covenant Sanctuary (Host)", "Living Faith"],
+        churches: ["Charismatic Renaissance International Church (Host)", "Living Faith"],
       };
 
       const json = JSON.stringify(mockState, null, 2);

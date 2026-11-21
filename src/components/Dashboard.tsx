@@ -98,10 +98,7 @@ const SESSIONS = [
 
 // Delegation breakdown
 const DELEGATIONS = [
-  { name: "Grace Covenant (Host)", count: 68, dot: "bg-[#0F472A]", type: "Host Ministry" },
-  { name: "Faith Apostolic Church", count: 34, dot: "bg-[#166534]", type: "Visiting Delegation" },
-  { name: "Living Streams Assembly", count: 28, dot: "bg-[#84CC16]", type: "Visiting Delegation" },
-  { name: "Redeemed Glory Center", count: 22, dot: "bg-emerald-500", type: "Visiting Delegation" },
+  { name: "Charismatic Renaissance (Host)", count: 68, dot: "bg-[#0F472A]", type: "Host Ministry" },
 ];
 
 interface DashboardProps {

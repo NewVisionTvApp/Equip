@@ -322,11 +322,7 @@ function getInitialState(): PlatformState {
 
   const churches = Array.from(
     new Set([
-      "Grace Covenant Sanctuary (Host)",
-      "Faith Apostolic Church",
-      "Living Streams Assembly",
-      "Redeemed Glory Center",
-      "Christ Ambassadors Fellowship",
+      "Charismatic Renaissance International Church (Host)",
       ...SEED_PARTICIPANTS.map((p) => p.churchName),
     ])
   ).sort();
@@ -661,10 +657,10 @@ export function registerParticipantForEvent(
       churchName: input.churchName.trim(),
       isHostChurch:
         input.churchName.includes("Host") ||
-        input.churchName.includes("Grace Covenant"),
+        input.churchName.includes("Charismatic Renaissance"),
       roleOffice: input.roleOffice.trim(),
       isOrdained,
-      location: input.location.trim() || "Lagos",
+      location: input.location.trim() || "Yenagoa, Bayelsa State",
       createdAt: new Date().toISOString(),
     };
   } else {
@@ -735,7 +731,7 @@ export function getRegisteredChurches(state: PlatformState): string[] {
   const fromState = state.churches || [];
   const fromParticipants = Object.values(state.participants).map((p) => p.churchName);
   return Array.from(
-    new Set(["Grace Covenant Sanctuary (Host)", ...fromState, ...fromParticipants])
+    new Set(["Charismatic Renaissance International Church (Host)", ...fromState, ...fromParticipants])
   )
     .filter((c) => c && c.trim().length > 0)
     .sort();
@@ -876,7 +872,7 @@ export function updateParticipantRecord(
   const isHostChurch =
     updates.isHostChurch !== undefined
       ? updates.isHostChurch
-      : churchNameVal.includes("Host") || churchNameVal.includes("Grace Covenant");
+      : churchNameVal.includes("Host") || churchNameVal.includes("Charismatic Renaissance");
 
   const updated: StoredParticipant = {
     ...existing,
