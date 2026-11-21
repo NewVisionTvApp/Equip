@@ -68,6 +68,9 @@ Desktop.ini
 *.swp
 *.swo
 
+# Local Agent Workspaces & Skills
+.agents/
+
 # Large Executables & Binary Artifacts
 *.exe
 *.dll
