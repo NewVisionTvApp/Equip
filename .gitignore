@@ -10,14 +10,11 @@ build/
 out/
 .next/
 
-# Cloudflare & Wrangler Local Runtime & Config
+# Cloudflare & Wrangler Local Runtime & Secrets
 .wrangler/
 .mf/
 .dev.vars
 .dev.vars.local
-wrangler.jsonc
-wrangler.json
-wrangler.toml
 
 # Internal Project Specs & Private Documentation
 docs/
