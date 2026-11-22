@@ -22,8 +22,10 @@ export default function CameraScannerModal({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const requestIdRef = useRef(0);
 
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastScanned, setLastScanned] = useState<{ id: string; time: string } | null>(null);
   const [isScanning, setIsScanning] = useState<boolean>(true);
@@ -54,24 +56,27 @@ export default function CameraScannerModal({
   };
 
   useEffect(() => {
-    if (!isOpen) {
-      stopCamera();
-      setLastScanned(null);
-      return;
-    }
-
-    startCamera();
-
+    setHasPermission(null);
+    setErrorMessage(null);
+    setIsStarting(false);
+    setLastScanned(null);
+    setIsScanning(true);
     return () => {
+      requestIdRef.current++;
       stopCamera();
     };
   }, [isOpen]);
 
   const startCamera = async () => {
+    const requestId = ++requestIdRef.current;
     setErrorMessage(null);
     setHasPermission(null);
+    setIsStarting(true);
 
     try {
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Open Equip directly in Chrome using its HTTPS address to use the camera.");
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment", // Rear camera on mobile
@@ -81,24 +86,32 @@ export default function CameraScannerModal({
         audio: false,
       });
 
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsinline", "true");
-        await videoRef.current.play();
-        setHasPermission(true);
-        requestAnimationFrame(scanFrame);
+      if (requestId !== requestIdRef.current || !videoRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
       }
+      streamRef.current = stream;
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+      if (requestId !== requestIdRef.current) return;
+      setHasPermission(true);
+      requestAnimationFrame(scanFrame);
     } catch (err: any) {
+      if (requestId !== requestIdRef.current) return;
       console.error("Camera access error:", err);
+      stopCamera();
       setHasPermission(false);
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        setErrorMessage("Camera access was denied. Please allow camera access in your browser settings to scan badges.");
+        setErrorMessage("Camera access is blocked. In Chrome, open Site settings from the icon beside the address bar, set Camera to Allow for Equip, then retry. If it is still blocked, check Windows camera privacy settings.");
       } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-        setErrorMessage("No video camera was found on this device.");
+        setErrorMessage("No camera was found. Connect or enable a webcam, or close this scanner and enter the Participant ID manually.");
+      } else if (err.name === "NotReadableError") {
+        setErrorMessage("The camera is busy or unavailable. Close other apps using it, then retry.");
       } else {
         setErrorMessage(`Could not start camera: ${err.message || "Unknown error"}`);
       }
+    } finally {
+      if (requestId === requestIdRef.current) setIsStarting(false);
     }
   };
 
@@ -107,6 +120,7 @@ export default function CameraScannerModal({
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    if (videoRef.current) videoRef.current.srcObject = null;
   };
 
   const scanFrame = () => {
@@ -230,21 +244,22 @@ export default function CameraScannerModal({
           )}
 
           {/* Permission / Error states */}
-          {hasPermission === false && (
-            <div className="p-6 text-center flex flex-col items-center gap-3">
+          {hasPermission !== true && (
+            <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center gap-3 p-6 text-center">
               <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
-                <AlertCircle className="w-6 h-6" />
+                {hasPermission === false ? <AlertCircle className="w-6 h-6" /> : <Camera className="w-6 h-6" />}
               </div>
-              <p className="text-xs text-rose-300 font-medium leading-relaxed max-w-xs">
-                {errorMessage}
+              <p role={hasPermission === false ? "alert" : "status"} className={`text-xs font-medium leading-relaxed max-w-xs ${hasPermission === false ? "text-rose-300" : "text-slate-300"}`}>
+                {hasPermission === false ? errorMessage : isStarting ? "Waiting for camera permission…" : "Start the camera to scan an attendee pass."}
               </p>
               <button
                 type="button"
                 onClick={startCamera}
-                className="mt-2 flex items-center gap-2 text-xs font-bold bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl text-white transition-all"
+                disabled={isStarting}
+                className="mt-2 flex items-center gap-2 text-xs font-bold bg-slate-800 hover:bg-slate-700 disabled:opacity-50 px-4 py-2 rounded-xl text-white transition-all"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>Retry Camera Permission</span>
+                <span>{hasPermission === false ? "Retry camera" : "Start camera"}</span>
               </button>
             </div>
           )}
@@ -275,7 +290,7 @@ export default function CameraScannerModal({
 
         {/* Footer info & manual switcher */}
         <div className="p-4 bg-slate-900/90 border-t border-slate-800 text-center flex items-center justify-between text-xs text-slate-400">
-          <span>Point camera at printed badge or phone screen</span>
+          <span>Scan a badge, or close this window and enter the Participant ID manually.</span>
           <button
             type="button"
             onClick={onClose}
