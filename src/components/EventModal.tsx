@@ -32,8 +32,8 @@ interface EventModalProps {
   events: EquipEvent[];
   activeEventId: string;
   onSelectEvent: (eventId: string) => void;
-  onCreateEvent: (newEvent: EquipEvent) => void;
-  onUpdateEvent?: (updatedEvent: EquipEvent) => void;
+  onCreateEvent: (newEvent: EquipEvent) => Promise<boolean>;
+  onUpdateEvent?: (updatedEvent: EquipEvent) => Promise<boolean>;
 }
 
 export default function EventModal({
@@ -47,6 +47,8 @@ export default function EventModal({
 }: EventModalProps) {
   const [viewMode, setViewMode] = useState<"list" | "create" | "edit">("list");
   const [editingEvent, setEditingEvent] = useState<EquipEvent | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   // Form state for Create / Edit
   const [formData, setFormData] = useState({
@@ -63,6 +65,7 @@ export default function EventModal({
 
   // Start Editing an existing event
   const handleStartEdit = (ev: EquipEvent) => {
+    setSaveError("");
     setEditingEvent(ev);
     const [month = "January", year = "2027"] = ev.monthYear.split(" ");
     setFormData({
@@ -79,6 +82,7 @@ export default function EventModal({
 
   // Start Creating a new event
   const handleStartCreate = () => {
+    setSaveError("");
     setEditingEvent(null);
     setFormData({
       month: "January",
@@ -112,43 +116,49 @@ export default function EventModal({
   };
 
   // Handle Form Submission (Create or Edit)
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
+    setSaveError("");
 
-    if (viewMode === "create") {
-      const id = `${formData.year}-${formData.month === "January" ? "01" : formData.month === "February" ? "02" : "03"}-EQUIP`;
-      const title = `Equip ${formData.month} ${formData.year}: ${formData.theme}`;
+    try {
+      if (viewMode === "create") {
+        const id = `${formData.year}-${formData.month === "January" ? "01" : formData.month === "February" ? "02" : "03"}-EQUIP`;
+        const title = `Equip ${formData.month} ${formData.year}: ${formData.theme}`;
 
-      const newEvent: EquipEvent = {
-        id,
-        title,
-        theme: formData.theme,
-        monthYear: `${formData.month} ${formData.year}`,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        status: formData.status,
-        registeredCount: 0,
-        sessions: formData.sessions,
-      };
+        const newEvent: EquipEvent = {
+          id,
+          title,
+          theme: formData.theme,
+          monthYear: `${formData.month} ${formData.year}`,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          status: formData.status,
+          registeredCount: 0,
+          sessions: formData.sessions,
+        };
 
-      onCreateEvent(newEvent);
-      setViewMode("list");
-    } else if (viewMode === "edit" && editingEvent) {
-      const updatedEvent: EquipEvent = {
-        ...editingEvent,
-        title: `Equip ${formData.month} ${formData.year}: ${formData.theme}`,
-        theme: formData.theme,
-        monthYear: `${formData.month} ${formData.year}`,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        status: formData.status,
-        sessions: formData.sessions,
-      };
+        if (await onCreateEvent(newEvent)) setViewMode("list");
+        else setSaveError("The programme was not saved. Please try again.");
+      } else if (viewMode === "edit" && editingEvent) {
+        const updatedEvent: EquipEvent = {
+          ...editingEvent,
+          title: `Equip ${formData.month} ${formData.year}: ${formData.theme}`,
+          theme: formData.theme,
+          monthYear: `${formData.month} ${formData.year}`,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          status: formData.status,
+          sessions: formData.sessions,
+        };
 
-      if (onUpdateEvent) {
-        onUpdateEvent(updatedEvent);
+        if (onUpdateEvent && await onUpdateEvent(updatedEvent)) setViewMode("list");
+        else setSaveError("The programme was not saved. Please try again.");
       }
-      setViewMode("list");
+    } catch {
+      setSaveError("The programme was not saved. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -277,6 +287,7 @@ export default function EventModal({
         {/* View Mode 2 & 3: Create / Edit Event & 5 Sessions Form */}
         {(viewMode === "create" || viewMode === "edit") && (
           <form onSubmit={handleSubmit} className="flex flex-col gap-5 animate-in fade-in">
+            {saveError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{saveError}</p>}
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <span className="text-sm font-extrabold text-slate-900">
                 {viewMode === "create" ? "Create New Monthly Programme" : `Edit ${editingEvent?.monthYear} Gathering`}
@@ -475,9 +486,10 @@ export default function EventModal({
             <div className="flex items-center gap-3 pt-2">
               <button
                 type="submit"
+                disabled={isSaving}
                 className="flex-1 h-11 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98]"
               >
-                {viewMode === "create" ? (
+                {isSaving ? <span>Saving programme…</span> : viewMode === "create" ? (
                   <>
                     <Sparkles className="w-3.5 h-3.5 text-[#A3E635]" />
                     <span>Create Programme & Initialize 5 Sessions</span>

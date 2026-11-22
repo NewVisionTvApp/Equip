@@ -79,8 +79,8 @@ export default function App() {
   const attendees = state && activeEvent ? getAttendeesForEvent(state, activeEvent.id) : [];
   const mutate = async (action: PlatformAction) => {
     setSaving(true); setError("");
-    try { acceptSnapshot(await apiRequest<{ state: PlatformState; revision: number }>("/api/platform/actions", { method: "POST", body: JSON.stringify(action) })); }
-    catch (error) { setError(error instanceof Error ? error.message : "The change could not be saved."); }
+    try { acceptSnapshot(await apiRequest<{ state: PlatformState; revision: number }>("/api/platform/actions", { method: "POST", body: JSON.stringify(action) })); return true; }
+    catch (error) { setError(error instanceof Error ? error.message : "The change could not be saved."); return false; }
     finally { setSaving(false); }
   };
   const updateSession = (sessionKey: string, data: Partial<SessionConfig>) => {
@@ -149,7 +149,7 @@ export default function App() {
           {effectiveView === "dashboard" && <Dashboard onRegisterClick={() => navigate("register")} onDirectoryClick={() => navigate("directory")} onSessionsClick={() => navigate("attendance")} onOpenEventModal={() => setIsEventModalOpen(true)} activeEventTheme={activeEvent.theme} activeEventMonthYear={activeEvent.monthYear} activeEventStatus={activeEvent.status} activeEventDates={formatEventFullDateRange(activeEvent.startDate, activeEvent.endDate, activeEvent.monthYear)} adminName={session.user.name} adminEmail={session.user.email} attendeesData={attendees} sessionsData={activeEvent.sessions} onToggleAttendance={toggleAttendance} onUpdateSession={updateSession} />}
           {effectiveView === "directory" && <AdminDirectory onBackToDashboard={() => navigate("dashboard")} onOpenRegister={() => navigate("register")} onOpenSessionAttendance={() => navigate("attendance")} activeEventName={activeEvent.title} attendeesData={attendees} sessionsData={activeEvent.sessions} onToggleSession={toggleAttendance} onUpdateParticipant={(participantId: string, data: Partial<StoredParticipant>) => void mutate({ type: "participant.update", participantId, data })} />}
           {effectiveView === "attendance" && <MultiSessionAttendance key={activeEvent.id} onBackToDashboard={() => navigate(isAdmin ? "dashboard" : "account")} onOpenDirectory={() => navigate("directory")} onOpenRegister={() => navigate("register")} activeEventName={activeEvent.title} activeEventDates={formatEventFullDateRange(activeEvent.startDate, activeEvent.endDate, activeEvent.monthYear)} rosterData={attendees} sessionsData={activeEvent.sessions} onToggleAttendance={toggleAttendance} onUpdateSession={isAdmin ? updateSession : undefined} canManage={isAdmin} />}
-          {isAdmin && <EventModal isOpen={isEventModalOpen} onClose={() => setIsEventModalOpen(false)} events={events.map(event => ({ ...event, registeredCount: state.registrations.filter(r => r.eventId === event.id).length }))} activeEventId={activeEvent.id} onSelectEvent={id => { setEventId(id); void mutate({ type: "event.select", eventId: id }); }} onCreateEvent={data => void mutate({ type: "event.create", data })} onUpdateEvent={data => void mutate({ type: "event.update", eventId: data.id, data })} />}
+          {isAdmin && <EventModal isOpen={isEventModalOpen} onClose={() => setIsEventModalOpen(false)} events={events.map(event => ({ ...event, registeredCount: state.registrations.filter(r => r.eventId === event.id).length }))} activeEventId={activeEvent.id} onSelectEvent={id => { setEventId(id); void mutate({ type: "event.select", eventId: id }); }} onCreateEvent={data => mutate({ type: "event.create", data })} onUpdateEvent={data => mutate({ type: "event.update", eventId: data.id, data })} />}
         </fieldset>
       </>}
   </div>;

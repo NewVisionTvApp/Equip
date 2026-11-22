@@ -176,6 +176,26 @@ test("An administrator can promote an attendee who can then manage account acces
   } finally { f.close(); }
 });
 
+test("Programme title edits appear in both public passes and the staff dashboard state", async () => {
+  const f = fixture();
+  try {
+    const admin = await f.signup("editor@example.invalid", "admin");
+    const eventId = "2026-11-EQUIP";
+    const initial = await (await f.request("/api/public/programme")).json();
+    const november = initial.events.find((event: { id: string }) => event.id === eventId);
+    assert.equal(november.title, "Equip November 2026: Financing The Ministry");
+    assert.equal(november.theme, "Financing The Ministry");
+    const updated = await f.request("/api/platform/actions", "POST", {
+      type: "event.update", eventId, data: { title: "Equip November 2026: Synthetic Updated Theme", theme: "Synthetic Updated Theme" },
+    }, admin.cookie);
+    assert.equal(updated.status, 200, await updated.clone().text());
+    const publicEvent = (await (await f.request("/api/public/programme")).json()).events.find((event: { id: string }) => event.id === eventId);
+    const staffEvent = (await (await f.request("/api/sync", "GET", undefined, admin.cookie)).json()).state.events.find((event: { id: string }) => event.id === eventId);
+    assert.deepEqual({ title: publicEvent.title, theme: publicEvent.theme }, { title: staffEvent.title, theme: staffEvent.theme });
+    assert.equal(publicEvent.title, "Equip November 2026: Synthetic Updated Theme");
+  } finally { f.close(); }
+});
+
 test("Concurrent registrations merge without lost updates and stale imports cannot overwrite them", async () => {
   const f = fixture();
   try {

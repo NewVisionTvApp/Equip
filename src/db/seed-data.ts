@@ -17,7 +17,7 @@ export interface SyntheticParticipantSeed {
 
 export const SEED_CURRENT_EVENT = {
   id: "2026-11-EQUIP",
-  title: "Equip November 2026: Apostolic Mantles & Spiritual Leadership",
+  title: "Equip November 2026: Financing The Ministry",
   monthYear: "November 2026",
   startDate: "2026-11-23",
   endDate: "2026-11-25",

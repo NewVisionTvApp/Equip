@@ -175,8 +175,8 @@ function getInitialState(): PlatformState {
   const initialEvents: EquipEvent[] = [
     {
       id: "2026-11-EQUIP",
-      title: "Equip November 2026: Apostolic Mantles & Spiritual Leadership",
-      theme: "Apostolic Mantles & Spiritual Leadership",
+      title: "Equip November 2026: Financing The Ministry",
+      theme: "Financing The Ministry",
       monthYear: "November 2026",
       startDate: "2026-11-23",
       endDate: "2026-11-25",
