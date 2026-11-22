@@ -13,12 +13,13 @@ function fixture(extraEnv: Record<string, string> = {}) {
     body: body === undefined ? undefined : JSON.stringify(body),
   }), env);
   const signup = async (email: string, role = "attendee") => {
-    const response = await request("/api/auth/sign-up/email", "POST", { name: "Synthetic Account", email, password: randomBytes(24).toString("hex"), role: "admin" });
+    const password = randomBytes(24).toString("hex");
+    const response = await request("/api/auth/sign-up/email", "POST", { name: "Synthetic Account", email, password, role: "admin" });
     assert.equal(response.status, 200, await response.clone().text());
     const user = (await response.json()).user;
     assert.equal(user.role, "attendee");
     if (role !== "attendee") db.sqlite.prepare("UPDATE user SET role=? WHERE id=?").run(role, user.id);
-    return { id: user.id, cookie: response.headers.getSetCookie().map(value => value.split(";")[0]).join("; ") };
+    return { id: user.id, password, cookie: response.headers.getSetCookie().map(value => value.split(";")[0]).join("; ") };
   };
   return { ...db, request, signup };
 }
@@ -151,6 +152,27 @@ test("Admin role changes revoke sessions; cross-origin changes and self-demotion
       [entry.action, entry.actorUserId, entry.targetId, entry.oldValue, entry.newValue]), [["role.change", admin.id, usher.id, "usher", "attendee"]]);
     assert.equal((await f.request("/api/admin/audit", "GET", undefined, usher.cookie)).status, 401);
     assert.equal((await f.request("/api/sync", "GET", undefined, usher.cookie)).status, 401);
+  } finally { f.close(); }
+});
+
+test("An administrator can promote an attendee who can then manage account access", async () => {
+  const f = fixture();
+  try {
+    const owner = await f.signup("owner@example.invalid", "admin");
+    const promoted = await f.signup("promoted@example.invalid");
+    const another = await f.signup("another@example.invalid");
+    assert.equal((await f.request("/api/admin/users", "POST", { userId: promoted.id, role: "admin" }, owner.cookie)).status, 200);
+    assert.equal(f.sqlite.prepare("SELECT role FROM user WHERE id=?").get(promoted.id).role, "admin");
+    assert.equal((await f.request("/api/admin/users", "GET", undefined, promoted.cookie)).status, 401);
+    const login = await f.request("/api/auth/sign-in/email", "POST", { email: "promoted@example.invalid", password: promoted.password });
+    assert.equal(login.status, 200, await login.clone().text());
+    const cookie = login.headers.getSetCookie().map(value => value.split(";")[0]).join("; ");
+    assert.equal((await f.request("/api/admin/users", "GET", undefined, cookie)).status, 200);
+    assert.equal((await f.request("/api/admin/users", "POST", { userId: another.id, role: "usher" }, cookie)).status, 200);
+    assert.equal(f.sqlite.prepare("SELECT role FROM user WHERE id=?").get(another.id).role, "usher");
+    const audit = await (await f.request("/api/admin/audit", "GET", undefined, cookie)).json();
+    assert.ok(audit.entries.some((entry: { actorUserId: string; targetId: string; oldValue: string; newValue: string }) =>
+      entry.actorUserId === owner.id && entry.targetId === promoted.id && entry.oldValue === "attendee" && entry.newValue === "admin"));
   } finally { f.close(); }
 });
 
