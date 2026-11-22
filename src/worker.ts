@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { createAuth } from "./lib/auth.ts";
+import { verifyTurnstile } from "./lib/turnstile.ts";
 import { actionSchema, claimSchema, profileInputSchema, registrationInputSchema, returningSchema, roleSchema } from "./lib/platform-schema.ts";
 import { updateParticipantRecord } from "./lib/store.ts";
 import { handleSyncRequest } from "./worker/sync.ts";
 import { HttpError, readState, mutateState, requireAdmin, publicProgramme, findClaimedParticipant, linkParticipant, registerPublic, renewPublic, applyAction, ownRecords, readJson, type Viewer } from "./worker/platform.ts";
 
-export type AppEnv = Env & { BETTER_AUTH_SECRET?: string };
+export type AppEnv = Env & { BETTER_AUTH_SECRET?: string; RESEND_API_KEY?: string; RESEND_FROM_EMAIL?: string; TURNSTILE_SITE_KEY?: string; TURNSTILE_SECRET_KEY?: string };
 
 async function viewerFor(request: Request, env: AppEnv): Promise<Viewer | null> {
   if (!env.BETTER_AUTH_SECRET || !request.headers.get("cookie")) return null;
@@ -28,13 +29,17 @@ async function rateLimit(request: Request, db: D1Database, limit: number) {
   if (row && row.count > limit) throw new HttpError(429, "Too many attempts. Please wait a minute and try again.");
 }
 
-async function api(request: Request, env: AppEnv): Promise<Response> {
+async function api(request: Request, env: AppEnv, ctx?: ExecutionContext): Promise<Response> {
   const path = new URL(request.url).pathname.replace(/\/$/, "");
+  if (path === "/api/public/config" && request.method === "GET") return Response.json({ passwordResetEnabled: Boolean(env.RESEND_API_KEY && env.RESEND_FROM_EMAIL), turnstileSiteKey: env.TURNSTILE_SECRET_KEY ? env.TURNSTILE_SITE_KEY || "" : "" });
   if (path === "/api/auth" || path.startsWith("/api/auth/")) {
     if (!env.DB || !env.BETTER_AUTH_SECRET) throw new HttpError(503, "Authentication is not configured.");
-    return createAuth(env.DB, env.BETTER_AUTH_SECRET, env.BETTER_AUTH_URL).handler(request);
+    const resetEmail = env.RESEND_API_KEY && env.RESEND_FROM_EMAIL
+      ? { apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM_EMAIL, waitUntil: ctx?.waitUntil.bind(ctx) }
+      : undefined;
+    return createAuth(env.DB, env.BETTER_AUTH_SECRET, env.BETTER_AUTH_URL, resetEmail).handler(request);
   }
-  const known = ["/api/sync", "/api/platform/actions", "/api/public/programme", "/api/public/register", "/api/public/lookup", "/api/public/return", "/api/me", "/api/me/link", "/api/admin/users"];
+  const known = ["/api/sync", "/api/platform/actions", "/api/public/programme", "/api/public/register", "/api/public/lookup", "/api/public/return", "/api/me", "/api/me/link", "/api/admin/users", "/api/admin/audit"];
   if (!known.includes(path)) throw new HttpError(404, "Not found.");
   if (!env.DB) throw new HttpError(503, "The database is not configured.");
   if (!["GET", "HEAD"].includes(request.method) && request.headers.get("origin") !== new URL(request.url).origin) throw new HttpError(403, "Requests must come from this website.");
@@ -48,6 +53,12 @@ async function api(request: Request, env: AppEnv): Promise<Response> {
   if (path.startsWith("/api/public/") && request.method === "POST") {
     await rateLimit(request, env.DB, path === "/api/public/lookup" ? 10 : 60);
     const body = await readJson(request);
+    if ((path === "/api/public/register" || path === "/api/public/return") && env.TURNSTILE_SITE_KEY && env.TURNSTILE_SECRET_KEY) {
+      const action = path === "/api/public/register" ? "register" : "return";
+      const token = z.object({ turnstileToken: z.string().optional() }).safeParse(body).data?.turnstileToken || "";
+      if (!await verifyTurnstile(token, env.TURNSTILE_SECRET_KEY, new URL(request.url).hostname, action, request.headers.get("CF-Connecting-IP") || undefined))
+        throw new HttpError(403, "Bot verification expired or failed. Please try again.");
+    }
     if (path === "/api/public/lookup") {
       const claim = claimSchema.parse(body);
       return Response.json({ participant: findClaimedParticipant((await readState(env.DB)).state, claim.id, claim.phone) });
@@ -87,23 +98,31 @@ async function api(request: Request, env: AppEnv): Promise<Response> {
     if (request.method === "POST") {
       const data = z.object({ userId: z.string().min(1).max(200), role: roleSchema }).parse(await readJson(request));
       if (data.userId === admin.id && data.role !== "admin") throw new HttpError(400, "Keep your own administrator access. Ask another administrator to change it.");
-      const user = await env.DB.prepare("SELECT id FROM user WHERE id=?").bind(data.userId).first();
+      const user = await env.DB.prepare("SELECT id,role FROM user WHERE id=?").bind(data.userId).first<{ id: string; role: string }>();
       if (!user) throw new HttpError(404, "Account not found.");
+      if (user.role === data.role) return Response.json({ ok: true });
       await env.DB.batch([
         env.DB.prepare("UPDATE user SET role=? WHERE id=?").bind(data.role, data.userId),
+        env.DB.prepare("INSERT INTO audit_log (id,actor_user_id,action,target_id,old_value,new_value,created_at) VALUES (?,?,?,?,?,?,?)")
+          .bind(crypto.randomUUID(), admin.id, "role.change", data.userId, user.role, data.role, Date.now()),
         env.DB.prepare("DELETE FROM session WHERE user_id=?").bind(data.userId),
       ]);
       return Response.json({ ok: true });
     }
   }
+  if (path === "/api/admin/audit" && request.method === "GET") {
+    requireAdmin(viewer);
+    const entries = await env.DB.prepare("SELECT actor_user_id AS actorUserId,action,target_id AS targetId,event_id AS eventId,session_key AS sessionKey,old_value AS oldValue,new_value AS newValue,created_at AS createdAt FROM audit_log ORDER BY created_at DESC LIMIT 50").all();
+    return Response.json({ entries: entries.results });
+  }
   throw new HttpError(405, "This request method is not allowed.");
 }
 
 export default {
-  async fetch(request: Request, env: AppEnv): Promise<Response> {
+  async fetch(request: Request, env: AppEnv, ctx?: ExecutionContext): Promise<Response> {
     if (!new URL(request.url).pathname.startsWith("/api/") && new URL(request.url).pathname !== "/api") return env.ASSETS.fetch(request);
     let response: Response;
-    try { response = await api(request, env); }
+    try { response = await api(request, env, ctx); }
     catch (error) {
       if (error instanceof HttpError) response = Response.json({ error: error.message }, { status: error.status });
       else if (error instanceof z.ZodError) response = Response.json({ error: error.issues[0]?.message || "Check the submitted fields." }, { status: 400 });

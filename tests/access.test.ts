@@ -5,9 +5,9 @@ import worker from "../src/worker.ts";
 import { testDatabase } from "./helpers/database.ts";
 
 const origin = "https://equip.app-f19.workers.dev";
-function fixture() {
+function fixture(extraEnv: Record<string, string> = {}) {
   const db = testDatabase();
-  const env = { DB: db.database, BETTER_AUTH_SECRET: randomBytes(48).toString("hex"), BETTER_AUTH_URL: origin, ASSETS: { fetch: async () => new Response("app shell") } };
+  const env = { DB: db.database, BETTER_AUTH_SECRET: randomBytes(48).toString("hex"), BETTER_AUTH_URL: origin, ASSETS: { fetch: async () => new Response("app shell") }, ...extraEnv };
   const request = (path: string, method = "GET", body?: unknown, cookie?: string, requestOrigin = origin) => worker.fetch(new Request(origin + path, {
     method, headers: { origin: requestOrigin, ...(body === undefined ? {} : { "content-type": "application/json" }), ...(cookie ? { cookie } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -88,7 +88,8 @@ test("Registration creates a pass, while an optional attendee account links to i
     const participant = (await first.json()).participant;
     assert.match(participant.id, /^EQ-/);
     assert.equal(participant.userId, undefined);
-    assert.equal((await second.json()).participant.userId, undefined);
+    const secondParticipant = (await second.json()).participant;
+    assert.equal(secondParticipant.userId, undefined);
     assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS count FROM user").get().count, 1);
     assert.equal((await (await f.request("/api/me", "GET", undefined, admin.cookie)).json()).participant, null);
 
@@ -101,6 +102,9 @@ test("Registration creates a pass, while an optional attendee account links to i
     assert.equal(records.participant.id, participant.id);
     assert.equal(records.registrations.length, 1);
     assert.equal((await f.request("/api/sync", "GET", undefined, attendee.cookie)).status, 403);
+    const staffPass = await f.request("/api/me/link", "POST", { id: secondParticipant.id, phone: "+2348000000002" }, admin.cookie);
+    assert.equal(staffPass.status, 200, await staffPass.clone().text());
+    assert.equal((await staffPass.json()).participant.id, secondParticipant.id);
   } finally { f.close(); }
 });
 
@@ -119,6 +123,9 @@ test("Ushers can register walk-ins and set attendance but cannot change events, 
       assert.equal(result.status, 200);
       assert.equal((await result.json()).state.attendance[`${id}_${event}_mon_am`].attended, true);
     }
+    const attendanceAudit = f.sqlite.prepare("SELECT actor_user_id,old_value,new_value FROM audit_log WHERE action='attendance.set'").all();
+    assert.equal(attendanceAudit.length, 1);
+    assert.deepEqual({ ...attendanceAudit[0] }, { actor_user_id: user.id, old_value: "false", new_value: "true" });
     for (const forbidden of [
       { type: "event.update", eventId: event, data: { title: "Forbidden" } },
       { type: "participant.update", participantId: id, data: { fullName: "Forbidden" } },
@@ -139,6 +146,10 @@ test("Admin role changes revoke sessions; cross-origin changes and self-demotion
     assert.equal((await f.request("/api/admin/users", "POST", { userId: admin.id, role: "attendee" }, admin.cookie)).status, 400);
     assert.equal((await f.request("/api/admin/users", "POST", { userId: usher.id, role: "attendee" }, admin.cookie, "https://untrusted.example")).status, 403);
     assert.equal((await f.request("/api/admin/users", "POST", { userId: usher.id, role: "attendee" }, admin.cookie)).status, 200);
+    const audit = await (await f.request("/api/admin/audit", "GET", undefined, admin.cookie)).json();
+    assert.deepEqual(audit.entries.map((entry: { action: string; actorUserId: string; targetId: string; oldValue: string; newValue: string }) =>
+      [entry.action, entry.actorUserId, entry.targetId, entry.oldValue, entry.newValue]), [["role.change", admin.id, usher.id, "usher", "attendee"]]);
+    assert.equal((await f.request("/api/admin/audit", "GET", undefined, usher.cookie)).status, 401);
     assert.equal((await f.request("/api/sync", "GET", undefined, usher.cookie)).status, 401);
   } finally { f.close(); }
 });
@@ -163,4 +174,23 @@ test("Public profile lookup is rate limited", async () => {
     for (let i = 0; i < 10; i++) assert.equal((await f.request("/api/public/lookup", "POST", { id: "EQ-23456", phone: "+2348000000001" })).status, 404);
     assert.equal((await f.request("/api/public/lookup", "POST", { id: "EQ-23456", phone: "+2348000000001" })).status, 429);
   } finally { f.close(); }
+});
+
+test("Public registration verifies a Turnstile token on the expected hostname and action", async () => {
+  const f = fixture({ TURNSTILE_SITE_KEY: "synthetic-site-key", TURNSTILE_SECRET_KEY: "synthetic-secret" });
+  const originalFetch = globalThis.fetch;
+  try {
+    const config = await (await f.request("/api/public/config")).json();
+    assert.equal(config.turnstileSiteKey, "synthetic-site-key");
+    const input = { ...profile(), eventId: await eventId(f) };
+    assert.equal((await f.request("/api/public/register", "POST", input)).status, 403);
+    globalThis.fetch = async (url, options) => {
+      assert.equal(url, "https://challenges.cloudflare.com/turnstile/v0/siteverify");
+      const verification = JSON.parse(String(options?.body));
+      assert.equal(verification.secret, "synthetic-secret");
+      return Response.json({ success: true, hostname: origin.replace("https://", ""), action: verification.response === "right-token" ? "register" : "return" });
+    };
+    assert.equal((await f.request("/api/public/register", "POST", { ...input, turnstileToken: "wrong-action" })).status, 403);
+    assert.equal((await f.request("/api/public/register", "POST", { ...input, turnstileToken: "right-token" })).status, 200);
+  } finally { globalThis.fetch = originalFetch; f.close(); }
 });

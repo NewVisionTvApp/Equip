@@ -4,13 +4,13 @@ import RegistrationFlow from "./components/RegistrationFlow";
 import AdminDirectory from "./components/AdminDirectory";
 import MultiSessionAttendance from "./components/MultiSessionAttendance";
 import EventModal from "./components/EventModal";
-import { SignInPanel, MyAccount, StaffAccess } from "./components/AccountAccess";
+import { SignInPanel, ResetPasswordPanel, VerifyTwoFactorPanel, MyAccount, StaffAccess } from "./components/AccountAccess";
 import { authClient } from "./lib/auth-client";
 import { apiRequest, type Programme } from "./lib/api-client";
 import { getAttendeesForEvent, formatEventFullDateRange, type PlatformState, type SessionConfig, type StoredParticipant } from "./lib/store";
 import type { PlatformAction } from "./lib/platform-schema";
 
-type AppView = "dashboard" | "directory" | "attendance" | "register" | "account" | "staff";
+type AppView = "dashboard" | "directory" | "attendance" | "register" | "account" | "staff" | "reset-password" | "verify-2fa";
 type Snapshot = { state: PlatformState; revision: number; identity: string };
 function route(): AppView {
   const path = window.location.pathname;
@@ -18,6 +18,8 @@ function route(): AppView {
   if (path === "/attendance" || path === "/usher") return "attendance";
   if (path === "/directory") return "directory";
   if (path === "/account" || path === "/login") return "account";
+  if (path === "/reset-password") return "reset-password";
+  if (path === "/verify-2fa") return "verify-2fa";
   if (path === "/staff") return "staff";
   return "dashboard";
 }
@@ -130,6 +132,8 @@ export default function App() {
     {error && <div role="alert" className="mx-auto max-w-7xl px-5 py-4 text-sm font-medium text-red-700">{error}<button className="ml-3 min-h-11 underline underline-offset-4" onClick={() => window.location.reload()}>Reload</button></div>}
     {saving && <p role="status" className="mx-auto max-w-7xl px-5 py-2 text-sm text-emerald-800">Saving…</p>}
     {isPending ? <p role="status" className="px-5 py-12 text-center text-sm text-slate-600">Checking your session…</p>
+      : view === "reset-password" ? <ResetPasswordPanel onSuccess={() => { window.history.replaceState(null, "", "/account"); setView("account"); }} />
+      : view === "verify-2fa" ? <VerifyTwoFactorPanel onSuccess={() => { void refetch(); window.history.replaceState(null, "", "/account"); setView("account"); }} />
       : view === "register" ? activeEvent ? <RegistrationFlow onBackToDashboard={() => navigate("account")} activeEventName={activeEvent.title} activeEventId={activeEvent.id} activeEventMonthYear={activeEvent.monthYear} activeEventTheme={activeEvent.theme} activeEventDates={formatEventFullDateRange(activeEvent.startDate, activeEvent.endDate, activeEvent.monthYear)} churchesList={programme?.churches || []} onParticipantRegistered={afterRegistration} /> : <p role="status" className="px-5 py-12 text-center text-sm text-slate-600">{programme ? "Registration opens soon." : "Loading programme details…"}</p>
       : !session ? <SignInPanel onSuccess={() => { void refetch(); navigate("account"); }} onRegister={() => navigate("register")} />
       : view === "account" || !isStaff ? <MyAccount key={session.user.id} user={session.user} onRegister={() => navigate("register")} />
@@ -144,7 +148,7 @@ export default function App() {
         <fieldset disabled={saving} className="contents" aria-busy={saving}>
           {effectiveView === "dashboard" && <Dashboard onRegisterClick={() => navigate("register")} onDirectoryClick={() => navigate("directory")} onSessionsClick={() => navigate("attendance")} onOpenEventModal={() => setIsEventModalOpen(true)} activeEventTheme={activeEvent.theme} activeEventMonthYear={activeEvent.monthYear} activeEventStatus={activeEvent.status} activeEventDates={formatEventFullDateRange(activeEvent.startDate, activeEvent.endDate, activeEvent.monthYear)} adminName={session.user.name} adminEmail={session.user.email} attendeesData={attendees} sessionsData={activeEvent.sessions} onToggleAttendance={toggleAttendance} onUpdateSession={updateSession} />}
           {effectiveView === "directory" && <AdminDirectory onBackToDashboard={() => navigate("dashboard")} onOpenRegister={() => navigate("register")} onOpenSessionAttendance={() => navigate("attendance")} activeEventName={activeEvent.title} attendeesData={attendees} sessionsData={activeEvent.sessions} onToggleSession={toggleAttendance} onUpdateParticipant={(participantId: string, data: Partial<StoredParticipant>) => void mutate({ type: "participant.update", participantId, data })} />}
-          {effectiveView === "attendance" && <MultiSessionAttendance onBackToDashboard={() => navigate(isAdmin ? "dashboard" : "account")} onOpenDirectory={() => navigate("directory")} onOpenRegister={() => navigate("register")} activeEventName={activeEvent.title} activeEventId={activeEvent.id} rosterData={attendees} sessionsData={activeEvent.sessions} onToggleAttendance={toggleAttendance} onUpdateSession={isAdmin ? updateSession : undefined} canManage={isAdmin} />}
+          {effectiveView === "attendance" && <MultiSessionAttendance key={activeEvent.id} onBackToDashboard={() => navigate(isAdmin ? "dashboard" : "account")} onOpenDirectory={() => navigate("directory")} onOpenRegister={() => navigate("register")} activeEventName={activeEvent.title} activeEventDates={formatEventFullDateRange(activeEvent.startDate, activeEvent.endDate, activeEvent.monthYear)} rosterData={attendees} sessionsData={activeEvent.sessions} onToggleAttendance={toggleAttendance} onUpdateSession={isAdmin ? updateSession : undefined} canManage={isAdmin} />}
           {isAdmin && <EventModal isOpen={isEventModalOpen} onClose={() => setIsEventModalOpen(false)} events={events.map(event => ({ ...event, registeredCount: state.registrations.filter(r => r.eventId === event.id).length }))} activeEventId={activeEvent.id} onSelectEvent={id => { setEventId(id); void mutate({ type: "event.select", eventId: id }); }} onCreateEvent={data => void mutate({ type: "event.create", data })} onUpdateEvent={data => void mutate({ type: "event.update", eventId: data.id, data })} />}
         </fieldset>
       </>}

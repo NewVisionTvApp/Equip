@@ -3,13 +3,7 @@ import {
   LayoutDashboard,
   Users,
   Calendar,
-  Building2,
-  BarChart3,
-  Settings,
-  HelpCircle,
-  LogOut,
   Search,
-  Bell,
   Plus,
   ArrowUpRight,
   QrCode,
@@ -285,50 +279,6 @@ export default function Dashboard({
                 </span>
               </button>
 
-              <button
-                type="button"
-                className="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left"
-              >
-                <Building2 className="w-4 h-4 text-slate-400" />
-                <span>Churches</span>
-              </button>
-
-              <button
-                type="button"
-                className="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left"
-              >
-                <BarChart3 className="w-4 h-4 text-slate-400" />
-                <span>Analytics</span>
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">
-                GENERAL
-              </span>
-              <button
-                type="button"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left"
-              >
-                <Settings className="w-4 h-4 text-slate-400" />
-                <span>Settings</span>
-              </button>
-
-              <button
-                type="button"
-                className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left"
-              >
-                <HelpCircle className="w-4 h-4 text-slate-400" />
-                <span>Help</span>
-              </button>
-
-              <button
-                type="button"
-                className="flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50/80 rounded-xl font-medium text-sm active:scale-[0.97] transition-all duration-150 ease-apple-spring text-left"
-              >
-                <LogOut className="w-4 h-4 text-red-500" />
-                <span>Logout</span>
-              </button>
             </div>
           </nav>
         </div>
@@ -400,15 +350,6 @@ export default function Dashboard({
               </span>
               <span>Programme records synced</span>
             </div>
-
-            <button
-              type="button"
-              className="w-10 h-10 rounded-xl bg-slate-50/80 border border-slate-200/70 flex items-center justify-center text-slate-600 hover:text-slate-900 active:scale-90 relative transition-all duration-150 ease-apple-spring"
-              aria-label="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="w-2 h-2 rounded-full bg-[#84CC16] absolute top-2 right-2 ring-2 ring-white" />
-            </button>
 
             <div className="flex items-center gap-3 pl-2 border-l border-slate-200/60">
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#0F472A] to-[#166534] text-[#A3E635] flex items-center justify-center text-xs font-bold shadow-xs ring-2 ring-emerald-50">

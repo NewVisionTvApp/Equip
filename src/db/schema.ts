@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const platformSyncState = sqliteTable("platform_sync_state", {
@@ -24,6 +24,7 @@ export const user = sqliteTable("user", {
   emailVerified: integer("email_verified", { mode: "boolean" }).notNull().default(false),
   image: text("image"),
   role: text("role").default("attendee"), // 'attendee' | 'admin'
+  twoFactorEnabled: integer("two_factor_enabled", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
@@ -63,6 +64,28 @@ export const verification = sqliteTable("verification", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
+
+export const twoFactor = sqliteTable("twoFactor", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  secret: text("secret").notNull(),
+  backupCodes: text("backup_codes").notNull(),
+  verified: integer("verified", { mode: "boolean" }).notNull().default(true),
+  failedVerificationCount: integer("failed_verification_count").notNull().default(0),
+  lockedUntil: integer("locked_until", { mode: "timestamp" }),
+}, table => ({ userIdIndex: index("two_factor_user_id_idx").on(table.userId) }));
+
+export const auditLog = sqliteTable("audit_log", {
+  id: text("id").primaryKey(),
+  actorUserId: text("actor_user_id").notNull(),
+  action: text("action").notNull(),
+  targetId: text("target_id").notNull(),
+  eventId: text("event_id"),
+  sessionKey: text("session_key"),
+  oldValue: text("old_value"),
+  newValue: text("new_value"),
+  createdAt: integer("created_at").notNull(),
+}, table => ({ createdAtIndex: index("audit_log_created_at_idx").on(table.createdAt) }));
 
 /* =========================================================================
    2. EQUIP DOMAIN TABLES (Participants, Monthly Events, Registrations, Attendance)

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   CheckCircle2,
   Copy,
@@ -25,6 +25,7 @@ import { authClient } from "@/lib/auth-client";
 import { apiRequest } from "@/lib/api-client";
 import type { StoredParticipant } from "@/lib/store";
 import PrintableBadgeModal from "./PrintableBadgeModal";
+import Turnstile from "./Turnstile";
 
 export interface RegistrationFlowProps {
   onBackToDashboard: () => void;
@@ -121,6 +122,10 @@ export default function RegistrationFlow({
   const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileVersion, setTurnstileVersion] = useState(0);
+  useEffect(() => { apiRequest<{ turnstileSiteKey: string }>("/api/public/config").then(config => setTurnstileSiteKey(config.turnstileSiteKey || "")).catch(() => {}); }, []);
 
   // Haptic audio feedback
   const playHapticAudio = () => {
@@ -159,6 +164,7 @@ export default function RegistrationFlow({
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (turnstileSiteKey && !turnstileToken) { setRegistrationError("Complete bot verification before registering."); return; }
     setIsSubmitting(true);
     setRegistrationError(null);
     try {
@@ -167,12 +173,12 @@ export default function RegistrationFlow({
         method: "POST", body: JSON.stringify({
           fullName: formData.fullName, phone: formData.phone, email: formData.email,
           churchName: finalChurch, roleOffice: formData.roleOffice, location: formData.location,
-          isOrdained: formData.roleType === "pastor", eventId: activeEventId,
+          isOrdained: formData.roleType === "pastor", eventId: activeEventId, turnstileToken,
         }),
       });
       confirmParticipant(result.participant);
     } catch (error) { setRegistrationError(error instanceof Error ? error.message : "Registration failed. Please try again."); }
-    finally { setIsSubmitting(false); }
+    finally { setIsSubmitting(false); setTurnstileToken(""); setTurnstileVersion(value => value + 1); }
   };
 
   const handleLookupSubmit = async (e: React.FormEvent) => {
@@ -191,15 +197,16 @@ export default function RegistrationFlow({
 
   const handleConfirmReturning = async () => {
     if (!lookupResult) return;
+    if (turnstileSiteKey && !turnstileToken) { setLookupError("Complete bot verification before renewing your pass."); return; }
     setIsSubmitting(true);
     setLookupError(null);
     try {
       const result = await apiRequest<{ participant: StoredParticipant }>("/api/public/return", {
-        method: "POST", body: JSON.stringify({ id: lookupResult.id, phone: lookupPhone, eventId: activeEventId }),
+        method: "POST", body: JSON.stringify({ id: lookupResult.id, phone: lookupPhone, eventId: activeEventId, turnstileToken }),
       });
       confirmParticipant(result.participant, true);
     } catch (error) { setLookupError(error instanceof Error ? error.message : "Could not renew your pass."); }
-    finally { setIsSubmitting(false); }
+    finally { setIsSubmitting(false); setTurnstileToken(""); setTurnstileVersion(value => value + 1); }
   };
 
   // 1-Tap WhatsApp Share for Delegates
@@ -230,6 +237,8 @@ export default function RegistrationFlow({
 
       if (res.error) {
         setAuthError(res.error.message || "Failed to sign in. Verify email and password.");
+      } else if (res.data && "twoFactorRedirect" in res.data && res.data.twoFactorRedirect) {
+        return;
       } else {
         playHapticAudio();
         // Redirect or show profile
@@ -564,6 +573,7 @@ export default function RegistrationFlow({
             </div>
 
             {/* Submit CTA */}
+            {turnstileSiteKey && <Turnstile key={`register-${turnstileVersion}`} siteKey={turnstileSiteKey} action="register" onToken={setTurnstileToken} />}
             {registrationError && <p role="alert" className="text-sm text-red-700">{registrationError}</p>}
             <button
               type="submit"
@@ -639,6 +649,7 @@ export default function RegistrationFlow({
                   <span className="text-slate-400 text-[11px] mt-0.5">Location: {lookupResult.location}</span>
                 </div>
 
+                {turnstileSiteKey && <Turnstile key={`return-${turnstileVersion}`} siteKey={turnstileSiteKey} action="return" onToken={setTurnstileToken} />}
                 <button
                   type="button"
                   onClick={handleConfirmReturning}

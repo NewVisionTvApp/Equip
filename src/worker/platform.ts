@@ -13,6 +13,7 @@ export class HttpError extends Error {
   }
 }
 export type Viewer = { id: string; role: UserRole };
+export type AuditEntry = { actorUserId: string; action: string; targetId: string; eventId?: string; sessionKey?: string; oldValue?: string; newValue?: string };
 const normalizePhone = (value: string) => value.replace(/[^\d]/g, "");
 
 export async function readState(db: D1Database): Promise<{ state: PlatformState; revision: number }> {
@@ -21,20 +22,26 @@ export async function readState(db: D1Database): Promise<{ state: PlatformState;
   return row ? { state: JSON.parse(row.state_json), revision: row.updated_at } : { state: createEmptyPlatformState(), revision: 0 };
 }
 
-async function writeState(db: D1Database, state: PlatformState, revision: number) {
+async function writeState(db: D1Database, state: PlatformState, revision: number, audit?: AuditEntry | null) {
   const next = Math.max(Date.now(), revision + 1);
-  const result = await db.prepare(`INSERT INTO platform_sync_state (id, state_json, updated_at) VALUES ('latest', ?, ?)
+  const write = db.prepare(`INSERT INTO platform_sync_state (id, state_json, updated_at) VALUES ('latest', ?, ?)
     ON CONFLICT(id) DO UPDATE SET state_json=excluded.state_json, updated_at=excluded.updated_at
-    WHERE platform_sync_state.updated_at = ?`).bind(JSON.stringify(state), next, revision).run();
+    WHERE platform_sync_state.updated_at = ?`).bind(JSON.stringify(state), next, revision);
+  const result = audit ? (await db.batch([
+    write,
+    db.prepare(`INSERT INTO audit_log (id,actor_user_id,action,target_id,event_id,session_key,old_value,new_value,created_at)
+      SELECT ?,?,?,?,?,?,?,?,? WHERE changes()=1`).bind(crypto.randomUUID(), audit.actorUserId, audit.action, audit.targetId,
+        audit.eventId || null, audit.sessionKey || null, audit.oldValue || null, audit.newValue || null, next),
+  ]))[0] : await write.run();
   return result.meta.changes === 1 ? next : null;
 }
 
-export async function mutateState<T>(db: D1Database, mutate: (state: PlatformState) => { state: PlatformState; result: T }, expectedRevision?: number) {
+export async function mutateState<T>(db: D1Database, mutate: (state: PlatformState) => { state: PlatformState; result: T }, expectedRevision?: number, audit?: (before: PlatformState) => AuditEntry | null) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const current = await readState(db);
     if (expectedRevision !== undefined && current.revision !== expectedRevision) throw new HttpError(409, "The records changed. Refresh before importing a backup.");
     const changed = mutate(current.state);
-    const revision = await writeState(db, changed.state, current.revision);
+    const revision = await writeState(db, changed.state, current.revision, audit?.(current.state));
     if (revision !== null) return { ...changed, revision };
   }
   throw new HttpError(409, "Another desk updated these records. Please try again.");
@@ -72,7 +79,7 @@ function requireUniquePhone(state: PlatformState, phone: string, exceptId?: stri
   }
 }
 export function linkParticipant(state: PlatformState, participant: StoredParticipant, viewer: Viewer | null) {
-  if (!viewer || viewer.role !== "attendee") return;
+  if (!viewer) return;
   if (participant.userId && participant.userId !== viewer.id) throw new HttpError(409, "This profile is already linked to another account.");
   if (Object.values(state.participants).some(p => p.userId === viewer.id && p.id !== participant.id)) throw new HttpError(409, "Your account is already linked to a different profile.");
   participant.userId = viewer.id;
@@ -84,7 +91,7 @@ export async function registerPublic(db: D1Database, data: RegistrationInput, vi
     requireEvent(state, data.eventId, true);
     requireUniquePhone(state, data.phone);
     const registered = registerParticipantForEvent(state, data);
-    linkParticipant(registered.state, registered.participant, viewer);
+    if (viewer?.role === "attendee") linkParticipant(registered.state, registered.participant, viewer);
     return { state: registered.state, result: registered.participant };
   });
 }
@@ -94,7 +101,7 @@ export async function renewPublic(db: D1Database, data: { id: string; phone: str
     requireEvent(state, data.eventId, true);
     const participant = findClaimedParticipant(state, data.id, data.phone);
     const registered = registerParticipantForEvent(state, { ...participant, eventId: data.eventId });
-    linkParticipant(registered.state, registered.participant, viewer);
+    if (viewer?.role === "attendee") linkParticipant(registered.state, registered.participant, viewer);
     return { state: registered.state, result: registered.participant };
   });
 }
@@ -145,7 +152,12 @@ export async function applyAction(db: D1Database, viewer: Viewer | null, action:
         break;
     }
     return { state, result: null };
-  }, action.type === "state.import" ? action.revision : undefined);
+  }, action.type === "state.import" ? action.revision : undefined, action.type === "attendance.set" ? before => {
+    const key = `${action.participantId}_${action.eventId}_${action.sessionKey}`;
+    const previous = Boolean(before.attendance[key]?.attended);
+    return previous === action.attended ? null : { actorUserId: viewer!.id, action: "attendance.set", targetId: action.participantId,
+      eventId: action.eventId, sessionKey: action.sessionKey, oldValue: String(previous), newValue: String(action.attended) };
+  } : undefined);
 }
 
 export function ownRecords(state: PlatformState, viewer: Viewer) {

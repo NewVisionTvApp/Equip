@@ -36,6 +36,10 @@ Shared attendance uses the dedicated D1 database `equip-db`, bound as `DB` in `w
 
 For local Worker login tests, set `BETTER_AUTH_URL=http://localhost:8787` and a local-only `BETTER_AUTH_SECRET` in ignored `.dev.vars`. The D1 binding uses a local database by default; apply migrations with `pnpm db:migrate:local`. Run `pnpm test` for synthetic registration, sync, and authentication checks.
 
+For local password-reset email, add your Resend key to `RESEND_API_KEY` in ignored `.dev.vars` and set `RESEND_FROM_EMAIL=Equip <no-reply@equip.newvisiontv.app>` after the sender domain is verified in Resend. `.dev.vars` affects local Wrangler only. Production needs the same names set as Worker secrets; never put the API key in `wrangler.jsonc`, `.env.example`, or Git. The reset link appears only when both runtime values are set.
+
+Production backup and restore steps are documented in [docs/RECOVERY.md](docs/RECOVERY.md). A D1 restore requires an approved recovery point because it removes later writes.
+
 ## Accounts and access
 
 - Administrators manage programmes, participant profiles, backups, and account roles at `/staff`.

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   Search,
   CheckCircle2,
@@ -13,8 +13,7 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { SEED_PARTICIPANTS } from "@/db/seed-data";
-import { SessionConfig, isAudioMuted, setAudioMuted } from "@/lib/store";
+import { createDefaultSessions, isAudioMuted, setAudioMuted, type AttendeeViewRecord, type SessionConfig } from "@/lib/store";
 import PrintableBadgeModal from "./PrintableBadgeModal";
 import EditSessionModal from "./EditSessionModal";
 import CameraScannerModal from "./CameraScannerModal";
@@ -24,79 +23,27 @@ interface MultiSessionAttendanceProps {
   onBackToDashboard: () => void;
   onOpenDirectory: () => void;
   onOpenRegister?: () => void;
-  activeEventName?: string;
-  activeEventId?: string;
-  rosterData?: any[];
+  activeEventName: string;
+  activeEventDates: string;
+  rosterData: AttendeeViewRecord[];
   sessionsData?: SessionConfig[];
-  onToggleAttendance?: (participantId: string, sessionKey: string) => void;
+  onToggleAttendance: (participantId: string, sessionKey: string) => void;
   onUpdateSession?: (sessionKey: string, sessionData: Partial<SessionConfig>) => void;
 }
-
-const SESSIONS_DATA = [
-  {
-    key: "mon_am",
-    name: "Keynote Impartation & Vision Casting",
-    short: "Mon AM",
-    day: "Day 1 · Mon, Nov 23 (Morning)",
-    time: "09:00 AM – 12:30 PM",
-    speaker: "Apostle J. Mensah",
-    hall: "Main Auditorium",
-    capacity: 200,
-  },
-  {
-    key: "mon_pm",
-    name: "Evening Anointing & Deliverance Plenary",
-    short: "Mon PM",
-    day: "Day 1 · Mon, Nov 23 (Evening)",
-    time: "05:30 PM – 08:30 PM",
-    speaker: "Bishop David O.",
-    hall: "Main Auditorium",
-    capacity: 200,
-  },
-  {
-    key: "tue_am",
-    name: "Pastoral Governance & Ministry Ethics",
-    short: "Tue AM",
-    day: "Day 2 · Tue, Nov 24 (Morning)",
-    time: "09:00 AM – 12:30 PM",
-    speaker: "Rev. Dr. Grace E.",
-    hall: "Synod Hall A",
-    capacity: 200,
-  },
-  {
-    key: "tue_pm",
-    name: "Signs, Wonders & Leadership Mantle",
-    short: "Tue PM",
-    day: "Day 2 · Tue, Nov 24 (Evening)",
-    time: "05:30 PM – 08:30 PM",
-    speaker: "Pastor Samuel K.",
-    hall: "Main Auditorium",
-    capacity: 200,
-  },
-  {
-    key: "wed_am",
-    name: "Final Mantle Impartation & Commissioning",
-    short: "Wed AM",
-    day: "Day 3 · Wed, Nov 25 (Morning Finale)",
-    time: "09:00 AM – 01:00 PM",
-    speaker: "Presiding Apostolic Council",
-    hall: "Main Auditorium",
-    capacity: 200,
-  },
-];
 
 export default function MultiSessionAttendance({
   canManage = true,
   onBackToDashboard,
   onOpenDirectory,
   onOpenRegister,
-  activeEventName = "Equip November 2026",
+  activeEventName,
+  activeEventDates,
   rosterData,
   sessionsData,
   onToggleAttendance,
   onUpdateSession,
 }: MultiSessionAttendanceProps) {
-  const [activeSessionKey, setActiveSessionKey] = useState("mon_pm");
+  const [activeSessionKey, setActiveSessionKey] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [fastScanInput, setFastScanInput] = useState("");
   const [scanAlert, setScanAlert] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -106,57 +53,11 @@ export default function MultiSessionAttendance({
   const [isMuted, setIsMuted] = useState(() => isAudioMuted());
   const [attendanceFilter, setAttendanceFilter] = useState<"all" | "checked_in" | "absent">("all");
 
-  // Attendees with session attendance map (using rosterData if provided, or default seeds)
-  const [internalRoster, setInternalRoster] = useState(() =>
-    SEED_PARTICIPANTS.map((p, idx) => {
-      const isOrdained =
-        p.roleOffice.toLowerCase().includes("pastor") ||
-        p.roleOffice.toLowerCase().includes("bishop") ||
-        p.roleOffice.toLowerCase().includes("reverend") ||
-        p.roleOffice.toLowerCase().includes("minister") ||
-        p.roleOffice.toLowerCase().includes("apostle");
-
-      return {
-        ...p,
-        isOrdained,
-        attendance: {
-          mon_am: idx < 8,
-          mon_pm: idx < 9,
-          tue_am: idx < 7,
-          tue_pm: idx < 6,
-          wed_am: idx < 9,
-        },
-        timestamps: {
-          mon_am: idx < 8 ? `08:${40 + idx * 2} AM` : null,
-          mon_pm: idx < 9 ? `05:${25 + idx * 3} PM` : null,
-          tue_am: idx < 7 ? `08:${50 + idx * 2} AM` : null,
-          tue_pm: idx < 6 ? `05:${35 + idx * 3} PM` : null,
-          wed_am: idx < 9 ? `08:${50 + idx * 2} AM` : null,
-        },
-      };
-    })
-  );
-
-  useEffect(() => {
-    if (rosterData && rosterData.length > 0) {
-      setInternalRoster(rosterData);
-    }
-  }, [rosterData]);
-
-  const roster = rosterData || internalRoster;
-
-  const sessions = useMemo(() => {
-    if (sessionsData && sessionsData.length > 0) {
-      return sessionsData.map((s, idx) => ({
-        ...(SESSIONS_DATA[idx] || SESSIONS_DATA[0]),
-        ...s,
-      }));
-    }
-    return SESSIONS_DATA;
-  }, [sessionsData]);
+  const roster = rosterData;
+  const sessions = useMemo(() => sessionsData?.length ? sessionsData : createDefaultSessions(), [sessionsData]);
 
   const activeSession = useMemo(
-    () => sessions.find((s) => s.key === activeSessionKey) || sessions[1],
+    () => sessions.find((s) => s.key === activeSessionKey) || sessions[0],
     [sessions, activeSessionKey]
   );
 
@@ -186,58 +87,27 @@ export default function MultiSessionAttendance({
     }
   };
 
-  // Helper to safely read attendance regardless of data format
-  const isAttendeeCheckedIn = (p: any, sKey: string): boolean => {
-    if (!p) return false;
-    const att = p.attendance || p.sessions;
-    return Boolean(att?.[sKey]);
+  const isAttendeeCheckedIn = (p: AttendeeViewRecord, sKey: string): boolean => {
+    return Boolean(sKey && p.sessions[sKey as SessionConfig["key"]]);
   };
 
-  const getAttendeeCheckInTime = (p: any, sKey: string): string | null => {
-    if (!p) return null;
-    const times = p.timestamps || p.sessionTimes;
-    return times?.[sKey] || null;
+  const getAttendeeCheckInTime = (p: AttendeeViewRecord, sKey: string): string | null => {
+    return sKey ? p.sessionTimes[sKey as SessionConfig["key"]] : null;
   };
 
   // Toggle single session check-in
   const toggleAttendance = (participantId: string, sessionKey: string) => {
+    if (!sessionKey) return;
     playHapticAudio();
-    if (onToggleAttendance) {
-      onToggleAttendance(participantId, sessionKey);
-    }
-    setInternalRoster((prev) =>
-      prev.map((p) => {
-        if (p.id === participantId) {
-          const current = isAttendeeCheckedIn(p, sessionKey);
-          const next = !current;
-          const time = next ? new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null;
-          return {
-            ...p,
-            attendance: {
-              ...(p.attendance || (p as any).sessions || {}),
-              [sessionKey]: next,
-            },
-            sessions: {
-              ...((p as any).sessions || p.attendance || {}),
-              [sessionKey]: next,
-            },
-            timestamps: {
-              ...(p.timestamps || (p as any).sessionTimes || {}),
-              [sessionKey]: time,
-            },
-            sessionTimes: {
-              ...((p as any).sessionTimes || p.timestamps || {}),
-              [sessionKey]: time,
-            },
-          };
-        }
-        return p;
-      })
-    );
+    onToggleAttendance(participantId, sessionKey);
   };
 
   // Core Verification Logic (used by both Keyboard and Camera Scanner)
   const verifyAttendee = (query: string) => {
+    if (!activeSessionKey) {
+      setScanAlert({ message: "Choose the current session before checking anyone in.", type: "error" });
+      return;
+    }
     if (!query.trim()) return;
 
     const q = query.trim().toUpperCase();
@@ -283,8 +153,8 @@ export default function MultiSessionAttendance({
 
   // Session Statistics
   const checkedInThisSession = roster.filter((p) => isAttendeeCheckedIn(p, activeSessionKey)).length;
-  const totalRoster = roster.length || 184;
-  const absentThisSession = Math.max(0, totalRoster - checkedInThisSession);
+  const totalRoster = roster.length;
+  const absentThisSession = activeSessionKey ? totalRoster - checkedInThisSession : 0;
   const clergyCheckedIn = roster.filter((p) => p.isOrdained && isAttendeeCheckedIn(p, activeSessionKey)).length;
   const delegatesCheckedIn = checkedInThisSession - clergyCheckedIn;
 
@@ -353,12 +223,12 @@ export default function MultiSessionAttendance({
           </button>
           <div className="flex flex-col">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Usher Mobile Desk · 5 Sessions</h1>
+              <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Usher Mobile Desk · {sessions.length} Sessions</h1>
               <span className="text-[11px] font-extrabold bg-[#0F472A] text-[#A3E635] px-2 py-0.5 rounded-full">
                 Live Door Scanner
               </span>
             </div>
-            <span className="text-xs text-slate-500 font-medium">Mon, Nov 23 – Wed, Nov 25, 2026 · Real-time attendance verification</span>
+            <span className="text-xs text-slate-500 font-medium">{activeEventDates} · Shared attendance verification</span>
           </div>
         </div>
 
@@ -401,6 +271,7 @@ export default function MultiSessionAttendance({
           {canManage && (<button
             type="button"
             onClick={handleExportSessionCSV}
+            disabled={!activeSessionKey}
             className="h-9 px-3.5 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95"
           >
             <Download className="w-3.5 h-3.5" />
@@ -409,9 +280,10 @@ export default function MultiSessionAttendance({
         </div>
       </header>
 
+      {!activeSessionKey && <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">Choose the session you are checking people into before using the door scanner or check-in buttons.</p>}
       {/* 5-Session Pill Selector Bar (Apple Fluid Tabs) */}
       <div className="bg-white/90 backdrop-blur-md rounded-2xl p-2 border border-slate-200/60 shadow-apple-card grid grid-cols-5 gap-2">
-        {SESSIONS_DATA.map((s) => {
+        {sessions.map((s) => {
           const isSelected = activeSessionKey === s.key;
           const count = roster.filter((p) => isAttendeeCheckedIn(p, s.key)).length;
 
@@ -453,18 +325,18 @@ export default function MultiSessionAttendance({
         <div className="lg:col-span-5 bg-gradient-to-br from-[#064E3B] via-[#0F472A] to-[#041D11] text-white rounded-2xl p-5 shadow-apple-card ring-1 ring-inset ring-white/10 flex flex-col justify-between h-44 relative overflow-hidden">
           <div className="flex items-center justify-between z-10">
             <span className="text-[10px] font-extrabold bg-[#A3E635] text-[#0F472A] px-2 py-0.5 rounded-full uppercase tracking-wider">
-              {activeSession.day}
+              {activeSessionKey ? activeSession.day : "Choose a session"}
             </span>
             <div className="flex items-center gap-2 text-xs text-emerald-200 font-medium">
               <span className="w-2 h-2 rounded-full bg-[#A3E635] animate-pulse" />
-              <span>{activeSession.hall}</span>
+              <span>{activeSessionKey ? activeSession.hall : "Select session"}</span>
             </div>
           </div>
 
           <div className="flex flex-col gap-1 z-10">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-extrabold text-white leading-snug">{activeSession.name}</h2>
-              {onUpdateSession && (<button
+              <h2 className="text-lg font-extrabold text-white leading-snug">{activeSessionKey ? activeSession.name : "Select a session above"}</h2>
+              {onUpdateSession && activeSessionKey && (<button
                 type="button"
                 onClick={() => setEditingSession(activeSession as any)}
                 className="px-2 py-0.5 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-colors flex items-center gap-1 text-[10px] font-bold border border-white/20 shrink-0"
@@ -475,7 +347,7 @@ export default function MultiSessionAttendance({
               </button>)}
             </div>
             <p className="text-xs text-emerald-200">
-              Presider: <strong className="text-white">{activeSession.speaker}</strong> · {activeSession.time}
+              {activeSessionKey && <>Presider: <strong className="text-white">{activeSession.speaker}</strong> · {activeSession.time}</>}
             </p>
           </div>
 
@@ -493,13 +365,14 @@ export default function MultiSessionAttendance({
               <span className="text-xs font-bold text-slate-900">Door Fast Scanner & Verification</span>
             </div>
             <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
-              Ready for Scans
+              {activeSessionKey ? "Ready for Scans" : "Choose Session"}
             </span>
           </div>
 
           <form onSubmit={handleFastScan} className="flex items-center gap-2 my-auto">
             <input
               type="text"
+              disabled={!activeSessionKey}
               value={fastScanInput}
               onChange={(e) => setFastScanInput(e.target.value)}
               placeholder="Type EQ-XXXXX ID, phone number, or attendee name..."
@@ -507,6 +380,7 @@ export default function MultiSessionAttendance({
             />
             <button
               type="button"
+              disabled={!activeSessionKey}
               onClick={() => setIsCameraScannerOpen(true)}
               className="h-11 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 shrink-0"
               title="Open Camera QR Scanner"
@@ -516,6 +390,7 @@ export default function MultiSessionAttendance({
             </button>
             <button
               type="submit"
+              disabled={!activeSessionKey}
               className="h-11 px-4 bg-[#0F472A] hover:bg-[#165A36] active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all shrink-0"
             >
               <Check className="w-4 h-4" />
@@ -537,7 +412,7 @@ export default function MultiSessionAttendance({
             </div>
           ) : (
             <div className="flex items-center justify-between text-[11px] text-slate-400">
-              <span>Press Enter ↵ to immediately check in participant</span>
+              <span>{activeSessionKey ? "Press Enter ↵ to check in participant" : "Choose a session to begin"}</span>
               <span>Ordained Ministers: {clergyCheckedIn} · Delegates: {delegatesCheckedIn}</span>
             </div>
           )}
@@ -573,6 +448,7 @@ export default function MultiSessionAttendance({
                   playHapticAudio();
                   setAttendanceFilter(tab.key as any);
                 }}
+                disabled={!activeSessionKey && tab.key !== "all"}
                 className={`px-3 py-1.5 rounded-xl font-bold transition-all text-xs shrink-0 active:scale-95 ${
                   attendanceFilter === tab.key
                     ? "bg-[#0F472A] text-white shadow-xs"
@@ -624,6 +500,7 @@ export default function MultiSessionAttendance({
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
+                    disabled={!activeSessionKey}
                     onClick={() => toggleAttendance(p.id, activeSessionKey)}
                     className={`h-9 px-3.5 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-xs ${
                       isAttended
@@ -719,6 +596,7 @@ export default function MultiSessionAttendance({
                         <td key={sKey} className={`py-3 px-2 text-center ${isCurrentSessionColumn ? "bg-emerald-50/30" : ""}`}>
                           <button
                             type="button"
+                            disabled={sKey !== activeSessionKey}
                             onClick={() => toggleAttendance(p.id, sKey)}
                             className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all active:scale-90 ${
                               isAttended
