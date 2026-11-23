@@ -37,17 +37,18 @@ export default function App() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const state = snapshot?.identity === identity && isStaff ? snapshot.state : null;
   const navigate = (target: AppView) => {
     window.history.pushState(null, "", target === "dashboard" ? "/" : `/${target}`);
-    setView(target); setError("");
+    setView(target); setError(""); setMenuOpen(false);
   };
   const acceptSnapshot = (data: { state: PlatformState; revision: number }, owner = identity) => {
     setSnapshot(current => current?.identity === owner && current.revision > data.revision ? current : { ...data, identity: owner });
   };
 
   useEffect(() => {
-    const pop = () => setView(route());
+    const pop = () => { setView(route()); setMenuOpen(false); };
     window.addEventListener("popstate", pop);
     // Remove the legacy shared roster cache; protected records now stay in memory only.
     localStorage.removeItem("equip_platform_state_v1");
@@ -116,19 +117,24 @@ export default function App() {
   const effectiveView = view === "dashboard" && role === "usher" ? "attendance" : view;
   const needsAdmin = ["dashboard", "directory", "staff"].includes(effectiveView);
   const allowedStaffView = isStaff && (!needsAdmin || isAdmin);
-  const navClass = "min-h-11 rounded-lg px-3 py-2 text-sm font-semibold hover:bg-emerald-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-300";
+  const navClass = "min-h-11 rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-emerald-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-300";
 
   return <div className="min-h-screen bg-slate-50 text-slate-900">
+    <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-emerald-900">Skip to content</a>
     <header className="bg-[#0B0F17] text-white">
-      <nav aria-label="Main navigation" className="mx-auto flex max-w-7xl flex-wrap items-center gap-1 px-4 py-3">
+      <nav aria-label="Main navigation" className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 py-3">
         <button onClick={() => navigate(isStaff ? "dashboard" : "register")} className={`${navClass} mr-auto text-base`}>Equip</button>
-        {isAdmin && <><button className={navClass} onClick={() => navigate("dashboard")}>Dashboard</button><button className={navClass} onClick={() => navigate("directory")}>Directory</button><button className={navClass} onClick={() => navigate("staff")}>Account access</button></>}
-        {isStaff && <button className={navClass} onClick={() => navigate("attendance")}>Attendance</button>}
-        <button className={navClass} onClick={() => navigate("register")}>Register</button>
-        <button className={navClass} onClick={() => navigate("account")}>{session ? "My account" : "Sign in / Create account"}</button>
-        {session && <button className={navClass} disabled={saving} onClick={() => void signOut()}>Sign out</button>}
+        <button type="button" aria-expanded={menuOpen} aria-controls="site-navigation" aria-label={menuOpen ? "Close menu" : "Open menu"} onClick={() => setMenuOpen(open => !open)} className={`${navClass} sm:hidden`}>{menuOpen ? "Close" : "Menu"}</button>
+        <div id="site-navigation" className={`${menuOpen ? "flex" : "hidden"} w-full flex-col gap-1 border-t border-white/15 pt-2 sm:flex sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:border-0 sm:pt-0`}>
+          {isAdmin && <><button className={navClass} aria-current={view === "dashboard" ? "page" : undefined} onClick={() => navigate("dashboard")}>Dashboard</button><button className={navClass} aria-current={view === "directory" ? "page" : undefined} onClick={() => navigate("directory")}>Directory</button><button className={navClass} aria-current={view === "staff" ? "page" : undefined} onClick={() => navigate("staff")}>Account access</button></>}
+          {isStaff && <button className={navClass} aria-current={view === "attendance" ? "page" : undefined} onClick={() => navigate("attendance")}>Attendance</button>}
+          <button className={navClass} aria-current={view === "register" ? "page" : undefined} onClick={() => navigate("register")}>Register</button>
+          <button className={navClass} aria-current={view === "account" ? "page" : undefined} onClick={() => navigate("account")}>{session ? "My account" : "Sign in / Create account"}</button>
+          {session && <button className={navClass} disabled={saving} onClick={() => void signOut()}>Sign out</button>}
+        </div>
       </nav>
     </header>
+    <div id="main-content" tabIndex={-1}>
     {error && <div role="alert" className="mx-auto max-w-7xl px-5 py-4 text-sm font-medium text-red-700">{error}<button className="ml-3 min-h-11 underline underline-offset-4" onClick={() => window.location.reload()}>Reload</button></div>}
     {saving && <p role="status" className="mx-auto max-w-7xl px-5 py-2 text-sm text-emerald-800">Saving…</p>}
     {isPending ? <p role="status" className="px-5 py-12 text-center text-sm text-slate-600">Checking your session…</p>
@@ -141,9 +147,9 @@ export default function App() {
       : effectiveView === "staff" ? <StaffAccess currentUserId={session.user.id} />
       : !state || !activeEvent ? <p role="status" className="px-5 py-12 text-center text-sm text-slate-600">Loading protected programme records…</p>
       : <>
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-5 py-4">
-          <label className="text-sm font-medium">Programme<select value={activeEvent.id} onChange={e => setEventId(e.target.value)} className="ml-2 min-h-11 max-w-full rounded-lg border border-slate-300 bg-white px-3 text-sm">{events.map(event => <option key={event.id} value={event.id}>{event.monthYear}</option>)}</select></label>
-          {isAdmin && <><button className="min-h-11 px-3 text-sm font-semibold text-emerald-800 underline underline-offset-4" onClick={() => setIsEventModalOpen(true)}>Manage programmes</button><button className="min-h-11 px-3 text-sm font-semibold text-emerald-800 underline underline-offset-4" onClick={exportBackup}>Export backup</button><label className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-semibold text-emerald-800 underline underline-offset-4">Import backup<input type="file" accept="application/json,.json" className="sr-only" onChange={e => { importBackup(e.target.files?.[0]); e.target.value = ""; }} /></label></>}
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 sm:px-5">
+          <label className="flex flex-col gap-1 text-sm font-medium sm:flex-row sm:items-center">Programme<select value={activeEvent.id} onChange={e => setEventId(e.target.value)} className="min-h-11 w-full max-w-full rounded-lg border border-slate-300 bg-white px-3 text-base sm:ml-2 sm:w-auto sm:text-sm">{events.map(event => <option key={event.id} value={event.id}>{event.monthYear}</option>)}</select></label>
+          {isAdmin && <><button className="min-h-11 self-start px-3 text-sm font-semibold text-emerald-800 underline underline-offset-4" onClick={() => setIsEventModalOpen(true)}>Manage programmes</button><button className="min-h-11 self-start px-3 text-sm font-semibold text-emerald-800 underline underline-offset-4" onClick={exportBackup}>Export backup</button><label className="flex min-h-11 cursor-pointer items-center self-start px-3 text-sm font-semibold text-emerald-800 underline underline-offset-4 focus-within:outline focus-within:outline-2 focus-within:outline-emerald-700">Import backup<input type="file" accept="application/json,.json" className="sr-only" onChange={e => { importBackup(e.target.files?.[0]); e.target.value = ""; }} /></label></>}
         </div>
         <fieldset disabled={saving} className="contents" aria-busy={saving}>
           {effectiveView === "dashboard" && <Dashboard onRegisterClick={() => navigate("register")} onDirectoryClick={() => navigate("directory")} onSessionsClick={() => navigate("attendance")} onOpenEventModal={() => setIsEventModalOpen(true)} activeEventTheme={activeEvent.theme} activeEventMonthYear={activeEvent.monthYear} activeEventStatus={activeEvent.status} activeEventDates={formatEventFullDateRange(activeEvent.startDate, activeEvent.endDate, activeEvent.monthYear)} adminName={session.user.name} adminEmail={session.user.email} attendeesData={attendees} sessionsData={activeEvent.sessions} onToggleAttendance={toggleAttendance} onUpdateSession={updateSession} />}
@@ -152,5 +158,6 @@ export default function App() {
           {isAdmin && <EventModal isOpen={isEventModalOpen} onClose={() => setIsEventModalOpen(false)} events={events.map(event => ({ ...event, registeredCount: state.registrations.filter(r => r.eventId === event.id).length }))} activeEventId={activeEvent.id} onSelectEvent={id => { setEventId(id); void mutate({ type: "event.select", eventId: id }); }} onCreateEvent={data => mutate({ type: "event.create", data })} onUpdateEvent={data => mutate({ type: "event.update", eventId: data.id, data })} />}
         </fieldset>
       </>}
+    </div>
   </div>;
 }

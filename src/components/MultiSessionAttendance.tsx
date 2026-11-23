@@ -212,12 +212,12 @@ export default function MultiSessionAttendance({
   return (
     <div className="min-h-screen bg-[#F8F9FA] bg-[radial-gradient(ellipse_100%_40%_at_50%_-10%,rgba(16,185,129,0.06),transparent)] text-slate-900 flex flex-col p-4 lg:p-6 gap-6 font-sans antialiased selection:bg-[#A3E635] selection:text-[#0F472A]">
       {/* Top Header */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/85 backdrop-blur-xl rounded-2xl px-6 py-4 border border-slate-200/60 shadow-apple-card ring-1 ring-black/[0.02] gap-4">
-        <div className="flex items-center gap-3">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/85 backdrop-blur-xl rounded-2xl px-4 sm:px-6 py-4 border border-slate-200/60 shadow-apple-card ring-1 ring-black/[0.02] gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0">
           <button
             type="button"
             onClick={onBackToDashboard}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100/80 px-3 py-1.5 rounded-xl border border-slate-200/50 active:scale-95 transition-all duration-150 ease-apple-spring"
+            className="flex min-h-11 self-start items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100/80 px-3 py-1.5 rounded-xl border border-slate-200/50 active:scale-95 transition-all duration-150 ease-apple-spring"
           >
             {canManage ? "Back to dashboard" : "My account"}
           </button>
@@ -232,12 +232,12 @@ export default function MultiSessionAttendance({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {onOpenRegister && (
             <button
               type="button"
               onClick={onOpenRegister}
-              className="h-9 px-3.5 bg-emerald-50 text-[#0F472A] hover:bg-emerald-100 border border-emerald-200/80 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs"
+              className="min-h-11 px-3.5 bg-emerald-50 text-[#0F472A] hover:bg-emerald-100 border border-emerald-200/80 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs"
               title="Register a walk-in attendee on the spot"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -248,7 +248,7 @@ export default function MultiSessionAttendance({
           {canManage && (<button
             type="button"
             onClick={onOpenDirectory}
-            className="h-9 px-3.5 bg-slate-100 hover:bg-slate-200/80 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs"
+            className="min-h-11 px-3.5 bg-slate-100 hover:bg-slate-200/80 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs"
           >
             <Users className="w-3.5 h-3.5" />
             <span>Participant Directory</span>
@@ -257,7 +257,8 @@ export default function MultiSessionAttendance({
           <button
             type="button"
             onClick={toggleMute}
-            className={`h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 border shadow-2xs ${
+            aria-label={isMuted ? "Turn sound on" : "Mute sound"}
+            className={`min-h-11 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 border shadow-2xs ${
               isMuted
                 ? "bg-amber-50 text-amber-900 border-amber-300"
                 : "bg-slate-100 hover:bg-slate-200/80 text-slate-700 border-slate-200"
@@ -272,7 +273,7 @@ export default function MultiSessionAttendance({
             type="button"
             onClick={handleExportSessionCSV}
             disabled={!activeSessionKey}
-            className="h-9 px-3.5 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95"
+            className="min-h-11 px-3.5 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export Session CSV</span>
@@ -282,7 +283,7 @@ export default function MultiSessionAttendance({
 
       {!activeSessionKey && <p role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">Choose the session you are checking people into before using the door scanner or check-in buttons.</p>}
       {/* 5-Session Pill Selector Bar (Apple Fluid Tabs) */}
-      <div className="bg-white/90 backdrop-blur-md rounded-2xl p-2 border border-slate-200/60 shadow-apple-card grid grid-cols-5 gap-2">
+      <div aria-label="Choose an attendance session" className="bg-white/90 backdrop-blur-md rounded-2xl p-2 border border-slate-200/60 shadow-apple-card flex gap-2 overflow-x-auto sm:grid sm:grid-cols-5">
         {sessions.map((s) => {
           const isSelected = activeSessionKey === s.key;
           const count = roster.filter((p) => isAttendeeCheckedIn(p, s.key)).length;
@@ -295,7 +296,9 @@ export default function MultiSessionAttendance({
                 playHapticAudio();
                 setActiveSessionKey(s.key);
               }}
-              className={`flex flex-col items-center justify-center py-2.5 px-3 rounded-xl transition-all duration-200 ease-apple-spring active:scale-95 ${
+              aria-pressed={isSelected}
+              aria-label={`${s.day} ${s.short}, ${count} checked in`}
+              className={`flex min-h-11 min-w-24 flex-col items-center justify-center py-2.5 px-3 rounded-xl transition-all duration-200 ease-apple-spring active:scale-95 sm:min-w-0 ${
                 isSelected
                   ? "bg-[#0F472A] text-white shadow-xs"
                   : "bg-slate-50/70 hover:bg-slate-100 text-slate-700"
@@ -322,7 +325,7 @@ export default function MultiSessionAttendance({
       {/* Active Session Info & Door Fast Scan Bar */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Active Session Highlight Card */}
-        <div className="lg:col-span-5 bg-gradient-to-br from-[#064E3B] via-[#0F472A] to-[#041D11] text-white rounded-2xl p-5 shadow-apple-card ring-1 ring-inset ring-white/10 flex flex-col justify-between h-44 relative overflow-hidden">
+        <div className="lg:col-span-5 bg-gradient-to-br from-[#064E3B] via-[#0F472A] to-[#041D11] text-white rounded-2xl p-5 shadow-apple-card ring-1 ring-inset ring-white/10 flex flex-col justify-between min-h-44 relative overflow-hidden">
           <div className="flex items-center justify-between z-10">
             <span className="text-[10px] font-extrabold bg-[#A3E635] text-[#0F472A] px-2 py-0.5 rounded-full uppercase tracking-wider">
               {activeSessionKey ? activeSession.day : "Choose a session"}
@@ -334,7 +337,7 @@ export default function MultiSessionAttendance({
           </div>
 
           <div className="flex flex-col gap-1 z-10">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-extrabold text-white leading-snug">{activeSessionKey ? activeSession.name : "Select a session above"}</h2>
               {onUpdateSession && activeSessionKey && (<button
                 type="button"
@@ -351,15 +354,15 @@ export default function MultiSessionAttendance({
             </p>
           </div>
 
-          <div className="flex items-center justify-between text-xs z-10 pt-2 border-t border-white/10">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs z-10 pt-2 border-t border-white/10">
             <span>Verified at Doors: <strong className="text-[#A3E635] font-mono text-sm">{checkedInThisSession}</strong></span>
             <span className="font-bold text-emerald-200">{clergyCheckedIn} Ministers · {delegatesCheckedIn} Delegates</span>
           </div>
         </div>
 
         {/* Door Fast Scan Desk Input */}
-        <div className="lg:col-span-7 bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-apple-card flex flex-col justify-between h-44">
-          <div className="flex items-center justify-between">
+        <div className="lg:col-span-7 bg-white/90 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-slate-200/60 shadow-apple-card flex flex-col justify-between gap-3 min-h-44">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <QrCode className="w-5 h-5 text-[#0F472A]" />
               <span className="text-xs font-bold text-slate-900">Door Fast Scanner & Verification</span>
@@ -369,29 +372,31 @@ export default function MultiSessionAttendance({
             </span>
           </div>
 
-          <form onSubmit={handleFastScan} className="flex items-center gap-2 my-auto">
+          <form onSubmit={handleFastScan} className="grid grid-cols-2 gap-2 my-auto sm:flex sm:items-center">
             <input
               type="text"
+              aria-label="Participant ID, phone number, or name for door check-in"
               disabled={!activeSessionKey}
               value={fastScanInput}
               onChange={(e) => setFastScanInput(e.target.value)}
               placeholder="Type EQ-XXXXX ID, phone number, or attendee name..."
-              className="flex-1 h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A]"
+              className="col-span-2 min-w-0 flex-1 h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-base sm:col-span-1 sm:text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A]"
             />
             <button
               type="button"
               disabled={!activeSessionKey}
               onClick={() => setIsCameraScannerOpen(true)}
-              className="h-11 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 shrink-0"
+              aria-label="Open camera QR scanner"
+              className="h-11 px-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 shrink-0"
               title="Open Camera QR Scanner"
             >
               <Camera className="w-4 h-4 text-[#0F472A]" />
-              <span className="hidden sm:inline">Camera Scan</span>
+              <span>Camera Scan</span>
             </button>
             <button
               type="submit"
               disabled={!activeSessionKey}
-              className="h-11 px-4 bg-[#0F472A] hover:bg-[#165A36] active:scale-95 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all shrink-0"
+              className="h-11 px-4 bg-[#0F472A] hover:bg-[#165A36] active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all shrink-0"
             >
               <Check className="w-4 h-4" />
               <span>Verify</span>
@@ -400,7 +405,7 @@ export default function MultiSessionAttendance({
 
           {/* Feedback Banner */}
           {scanAlert ? (
-            <div
+            <div role="status"
               className={`p-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in ${
                 scanAlert.type === "success"
                   ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
@@ -427,15 +432,16 @@ export default function MultiSessionAttendance({
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
+              aria-label="Filter attendance roster by name, ID, or church"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Filter roster by name, ID, or church..."
-              className="w-full h-9 pl-9 pr-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+              className="w-full min-h-11 pl-9 pr-3 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
             />
           </div>
 
           {/* Door Usher Filter Segmented Control */}
-          <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+          <div aria-label="Filter attendance roster" className="flex items-center gap-1.5 overflow-x-auto text-xs">
             {[
               { key: "all", label: `All (${totalRoster})` },
               { key: "checked_in", label: `Checked In (${checkedInThisSession})` },
@@ -449,7 +455,8 @@ export default function MultiSessionAttendance({
                   setAttendanceFilter(tab.key as any);
                 }}
                 disabled={!activeSessionKey && tab.key !== "all"}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all text-xs shrink-0 active:scale-95 ${
+                aria-pressed={attendanceFilter === tab.key}
+                className={`min-h-11 px-3 py-1.5 rounded-xl font-bold transition-all text-xs shrink-0 active:scale-95 ${
                   attendanceFilter === tab.key
                     ? "bg-[#0F472A] text-white shadow-xs"
                     : "bg-slate-100 hover:bg-slate-200/70 text-slate-600"
@@ -472,7 +479,7 @@ export default function MultiSessionAttendance({
             const checkInTime = getAttendeeCheckInTime(p, activeSessionKey);
 
             return (
-              <div key={p.id} className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors">
+              <div key={p.id} className="p-4 flex flex-col gap-3 hover:bg-slate-50/80 transition-colors sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3 min-w-0">
                   <div
                     className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
@@ -497,12 +504,13 @@ export default function MultiSessionAttendance({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
                     disabled={!activeSessionKey}
                     onClick={() => toggleAttendance(p.id, activeSessionKey)}
-                    className={`h-9 px-3.5 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-xs ${
+                    aria-label={`${isAttended ? "Remove check-in for" : "Check in"} ${p.fullName}`}
+                    className={`min-h-11 px-3.5 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 shadow-xs ${
                       isAttended
                         ? "bg-emerald-600 text-white"
                         : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
@@ -521,7 +529,8 @@ export default function MultiSessionAttendance({
                   <button
                     type="button"
                     onClick={() => setBadgeParticipant(p)}
-                    className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-xl bg-slate-50 border border-slate-200 shrink-0"
+                    aria-label={`View badge for ${p.fullName}`}
+                    className="w-11 h-11 flex items-center justify-center text-slate-600 hover:text-slate-800 rounded-xl bg-slate-50 border border-slate-200 shrink-0"
                     title="View Badge & Punch-Card"
                   >
                     <Printer className="w-4 h-4" />

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Search,
   Download,
@@ -45,6 +45,26 @@ export default function AdminDirectory({
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [saveAlert, setSaveAlert] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!selectedParticipant) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialogRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedParticipant(null);
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const controls = [...dialogRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled])')];
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => { document.removeEventListener("keydown", onKeyDown); document.body.style.overflow = previousOverflow; previousFocus?.focus(); };
+  }, [Boolean(selectedParticipant)]);
 
   // Expanded attendees with 5-session attendance simulation
   const [directoryData, setDirectoryData] = useState(() =>
@@ -268,31 +288,31 @@ export default function AdminDirectory({
   return (
     <div className="min-h-screen bg-[#F8F9FA] bg-[radial-gradient(ellipse_100%_40%_at_50%_-10%,rgba(16,185,129,0.06),transparent)] text-slate-900 flex flex-col p-4 lg:p-6 gap-6 font-sans antialiased selection:bg-[#A3E635] selection:text-[#0F472A]">
       {/* Top Header Navigation */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/85 backdrop-blur-xl rounded-2xl px-6 py-4 border border-slate-200/60 shadow-apple-card ring-1 ring-black/[0.02] gap-4">
-        <div className="flex items-center gap-3">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/85 backdrop-blur-xl rounded-2xl px-4 sm:px-6 py-4 border border-slate-200/60 shadow-apple-card ring-1 ring-black/[0.02] gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0">
           <button
             type="button"
             onClick={onBackToDashboard}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100/80 px-3 py-1.5 rounded-xl border border-slate-200/50 active:scale-95 transition-all duration-150 ease-apple-spring"
+            className="flex min-h-11 self-start items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100/80 px-3 py-1.5 rounded-xl border border-slate-200/50 active:scale-95 transition-all duration-150 ease-apple-spring"
           >
             ← Dashboard
           </button>
           <div className="flex flex-col">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Participant Directory</h1>
               <span className="text-[11px] font-extrabold bg-[#0F472A] text-[#A3E635] px-2 py-0.5 rounded-full">
                 {filteredData.length} Records
               </span>
             </div>
-            <span className="text-xs text-slate-400">Master attendee database across all monthly events</span>
+            <span className="text-xs text-slate-600">Participants registered for this programme</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={onOpenSessionAttendance}
-            className="h-9 px-3.5 bg-emerald-50 text-[#0F472A] hover:bg-emerald-100 border border-emerald-200/70 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs"
+            className="min-h-11 px-3.5 bg-emerald-50 text-[#0F472A] hover:bg-emerald-100 border border-emerald-200/70 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs"
           >
             <Clock className="w-3.5 h-3.5" />
             <span>Multi-Session Desk</span>
@@ -301,7 +321,7 @@ export default function AdminDirectory({
           <button
             type="button"
             onClick={onOpenRegister}
-            className="h-9 px-3.5 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95"
+            className="min-h-11 px-3.5 bg-[#0F472A] hover:bg-[#165A36] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>+ Add Attendee</span>
@@ -310,7 +330,7 @@ export default function AdminDirectory({
           <button
             type="button"
             onClick={handleExportCSV}
-            className="h-9 px-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all active:scale-95"
+            className="min-h-11 px-3.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all active:scale-95"
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
             <span>Export CSV</span>
@@ -325,18 +345,16 @@ export default function AdminDirectory({
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            aria-label="Search participants by name, ID, phone, church, or city"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name, ID, phone, church, or city..."
-            className="w-full h-10 pl-10 pr-12 bg-slate-50/80 border border-slate-200/80 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all"
+            className="w-full min-h-11 pl-10 pr-3 bg-slate-50/80 border border-slate-200/80 rounded-xl text-base sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all"
           />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 bg-white border border-slate-200 px-1.5 py-0.5 rounded-md">
-            ⌘ F
-          </span>
         </div>
 
         {/* Role & Affiliation Filters (Apple Pill Segmented Control) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 text-xs">
+        <div aria-label="Filter participants" className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 text-xs">
           {[
             { key: "all", label: `All (${allCount})` },
             { key: "pastors", label: `Ordained Pastors (${pastorsCount})` },
@@ -351,7 +369,8 @@ export default function AdminDirectory({
                 playHapticAudio();
                 setRoleFilter(tab.key as any);
               }}
-              className={`px-3 py-1.5 rounded-xl font-bold transition-all text-xs shrink-0 active:scale-95 ${
+              aria-pressed={roleFilter === tab.key}
+              className={`min-h-11 px-3 py-1.5 rounded-xl font-bold transition-all text-xs shrink-0 active:scale-95 ${
                 roleFilter === tab.key
                   ? "bg-[#0F472A] text-white shadow-xs"
                   : "bg-slate-100/80 text-slate-600 hover:bg-slate-200/70"
@@ -365,7 +384,22 @@ export default function AdminDirectory({
 
       {/* Directory Table Grid */}
       <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/60 shadow-apple-card overflow-hidden">
-        <div className="overflow-x-auto">
+        {filteredData.length === 0 && <p role="status" className="p-5 text-sm text-slate-600">No participants match this search or filter.</p>}
+        <ul className="divide-y divide-slate-100 md:hidden">
+          {filteredData.map(p => {
+            const attendedCount = Object.values(p.sessions).filter(Boolean).length;
+            return <li key={p.id} className="flex flex-col gap-3 p-4">
+              <div className="min-w-0"><p className="break-words text-base font-bold text-slate-900">{p.fullName}</p><p className="text-sm font-semibold text-emerald-900">{p.id}</p></div>
+              <p className="break-words text-sm text-slate-700">{p.roleOffice} · {p.churchName}</p>
+              <p className="text-sm text-slate-600">{p.location} · {attendedCount} of 5 sessions</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setSelectedParticipant(p)} className="min-h-11 rounded-xl bg-[#0F472A] px-4 text-sm font-semibold text-white">View details</button>
+                <button type="button" onClick={() => setBadgeParticipant(p)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-800">Print badge</button>
+              </div>
+            </li>;
+          })}
+        </ul>
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200/60 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
@@ -498,19 +532,20 @@ export default function AdminDirectory({
 
       {/* Participant Profile Drawer / Modal */}
       {selectedParticipant && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200/80 flex flex-col gap-5 relative animate-in zoom-in-95 duration-200 ease-apple-spring">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
+          <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={`Participant details for ${selectedParticipant.fullName}`} className="bg-white rounded-2xl max-w-lg w-full max-h-[calc(100dvh-1rem)] overflow-y-auto p-4 sm:p-6 shadow-2xl border border-slate-200/80 flex flex-col gap-5 relative animate-in zoom-in-95 duration-200 ease-apple-spring">
             {/* Close Button */}
             <button
               type="button"
               onClick={() => setSelectedParticipant(null)}
-              className="absolute right-4 top-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors"
+              aria-label="Close participant details"
+              className="absolute right-3 top-3 w-11 h-11 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
 
             {/* Profile Header */}
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-wrap items-start justify-between gap-3 pr-10">
               <div className="flex items-center gap-4 min-w-0">
                 <div
                   className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 ${
@@ -524,17 +559,17 @@ export default function AdminDirectory({
 
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-lg font-extrabold text-slate-900 truncate">{selectedParticipant.fullName}</h3>
+                    <h3 className="break-words text-lg font-extrabold text-slate-900">{selectedParticipant.fullName}</h3>
                     {selectedParticipant.isOrdained && (
                       <span className="text-[10px] font-extrabold bg-[#0F472A] text-[#A3E635] px-2 py-0.5 rounded-full uppercase shrink-0">
                         Ordained Minister
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-slate-500 truncate">
+                  <span className="break-words text-xs text-slate-600">
                     {selectedParticipant.roleOffice} · {selectedParticipant.churchName}
                   </span>
-                  <span className="text-[11px] text-slate-400 mt-0.5 truncate">{selectedParticipant.location}</span>
+                  <span className="break-words text-xs text-slate-600 mt-0.5">{selectedParticipant.location}</span>
                 </div>
               </div>
 
@@ -547,7 +582,7 @@ export default function AdminDirectory({
                     handleStartEdit();
                   }
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 border shrink-0 ${
+                className={`min-h-11 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 border shrink-0 ${
                   isEditing
                     ? "bg-slate-100 text-slate-700 border-slate-300"
                     : "bg-emerald-50 text-[#0F472A] hover:bg-emerald-100 border-emerald-200"
@@ -561,7 +596,7 @@ export default function AdminDirectory({
 
             {/* Save Notification Alert */}
             {saveAlert && (
-              <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2 animate-in fade-in">
+              <div role="status" className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2 animate-in fade-in">
                 <Check className="w-4 h-4 text-emerald-600" />
                 <span>{saveAlert}</span>
               </div>
@@ -569,7 +604,7 @@ export default function AdminDirectory({
 
             {/* Profile Drawer Body: Edit Form vs View Mode */}
             {isEditing ? (
-              <form onSubmit={handleSaveProfile} className="flex flex-col gap-3.5 bg-slate-50/80 p-4 rounded-2xl border border-slate-200 text-xs">
+              <form onSubmit={handleSaveProfile} className="flex flex-col gap-3.5 bg-slate-50/80 p-3 sm:p-4 rounded-2xl border border-slate-200 text-sm">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                   <span className="font-extrabold text-slate-900 text-sm">Edit Attendee Details</span>
                   <span className="font-mono text-xs text-[#0F472A] bg-lime-100 border border-lime-200 px-2 py-0.5 rounded font-bold">
@@ -578,69 +613,75 @@ export default function AdminDirectory({
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="font-bold text-slate-700 text-[11px]">Full Name (with Title)</label>
+                  <label htmlFor="profile-name" className="font-bold text-slate-700 text-sm">Full Name (with Title)</label>
                   <input
+                    id="profile-name"
                     type="text"
                     required
                     value={editForm.fullName || ""}
                     onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
-                    className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+                    className="min-h-11 px-3 bg-white border border-slate-200 rounded-xl text-base font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="flex flex-col gap-1">
-                    <label className="font-bold text-slate-700 text-[11px]">Phone / WhatsApp</label>
+                    <label htmlFor="profile-phone" className="font-bold text-slate-700 text-sm">Phone / WhatsApp</label>
                     <input
+                      id="profile-phone"
                       type="tel"
                       required
                       value={editForm.phone || ""}
                       onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                      className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+                      className="min-h-11 px-3 bg-white border border-slate-200 rounded-xl text-base font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="font-bold text-slate-700 text-[11px]">Email Address</label>
+                    <label htmlFor="profile-email" className="font-bold text-slate-700 text-sm">Email Address</label>
                     <input
+                      id="profile-email"
                       type="email"
                       value={editForm.email || ""}
                       onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                      className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+                      className="min-h-11 px-3 bg-white border border-slate-200 rounded-xl text-base font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
                     />
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="font-bold text-slate-700 text-[11px]">Affiliated Church / Ministry</label>
+                  <label htmlFor="profile-church" className="font-bold text-slate-700 text-sm">Affiliated Church / Ministry</label>
                   <input
+                    id="profile-church"
                     type="text"
                     required
                     value={editForm.churchName || ""}
                     onChange={(e) => setEditForm({ ...editForm, churchName: e.target.value })}
-                    className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+                    className="min-h-11 px-3 bg-white border border-slate-200 rounded-xl text-base font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="flex flex-col gap-1">
-                    <label className="font-bold text-slate-700 text-[11px]">Role / Office</label>
+                    <label htmlFor="profile-role" className="font-bold text-slate-700 text-sm">Role / Office</label>
                     <input
+                      id="profile-role"
                       type="text"
                       required
                       value={editForm.roleOffice || ""}
                       onChange={(e) => setEditForm({ ...editForm, roleOffice: e.target.value })}
-                      className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+                      className="min-h-11 px-3 bg-white border border-slate-200 rounded-xl text-base font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
                     />
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <label className="font-bold text-slate-700 text-[11px]">Branch / Location</label>
+                    <label htmlFor="profile-location" className="font-bold text-slate-700 text-sm">Branch / Location</label>
                     <input
+                      id="profile-location"
                       type="text"
                       value={editForm.location || ""}
                       onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
-                      className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
+                      className="min-h-11 px-3 bg-white border border-slate-200 rounded-xl text-base font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0F472A]/20 focus:border-[#0F472A]"
                     />
                   </div>
                 </div>
@@ -659,13 +700,13 @@ export default function AdminDirectory({
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    className="h-9 px-3.5 rounded-xl bg-slate-200/80 hover:bg-slate-300 text-slate-700 font-semibold"
+                    className="min-h-11 px-3.5 rounded-xl bg-slate-200/80 hover:bg-slate-300 text-slate-700 font-semibold"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="h-9 px-4 rounded-xl bg-[#0F472A] hover:bg-[#165A36] text-white font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95"
+                    className="min-h-11 px-4 rounded-xl bg-[#0F472A] hover:bg-[#165A36] text-white font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95"
                   >
                     <Save className="w-3.5 h-3.5" />
                     <span>Save Changes</span>
@@ -675,7 +716,7 @@ export default function AdminDirectory({
             ) : (
               <>
                 {/* Unique ID Box */}
-                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between">
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-col">
                     <span className="text-[10px] uppercase font-bold text-slate-400">Unique Participant ID</span>
                     <span className="font-mono text-xl font-black text-[#0F472A]">{selectedParticipant.id}</span>
@@ -684,7 +725,7 @@ export default function AdminDirectory({
                   <button
                     type="button"
                     onClick={() => handleCopy(selectedParticipant.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs active:scale-95 transition-all"
+                    className="flex min-h-11 items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs active:scale-95 transition-all"
                   >
                     {copiedId === selectedParticipant.id ? (
                       <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -717,7 +758,7 @@ export default function AdminDirectory({
                       return (
                         <div
                           key={s.key}
-                          className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/60 text-xs"
+                          className="flex flex-col gap-2 p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/60 text-xs sm:flex-row sm:items-center sm:justify-between"
                         >
                           <div className="flex flex-col">
                             <span className="font-semibold text-slate-800">{s.name}</span>
@@ -727,7 +768,8 @@ export default function AdminDirectory({
                           <button
                             type="button"
                             onClick={() => toggleSessionForParticipant(selectedParticipant.id, s.key)}
-                            className={`px-3 py-1 rounded-full font-bold text-xs transition-all active:scale-95 ${
+                            aria-label={`${isChecked ? "Remove attendance for" : "Mark present"} ${selectedParticipant.fullName}, ${s.name}`}
+                            className={`min-h-11 self-start px-3 py-1 rounded-full font-bold text-xs transition-all active:scale-95 sm:self-auto ${
                               isChecked
                                 ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                                 : "bg-slate-200/70 text-slate-600 hover:bg-slate-300/60"
@@ -744,7 +786,7 @@ export default function AdminDirectory({
             )}
 
             {/* Footer Buttons */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center">
               <button
                 type="button"
                 onClick={() => {

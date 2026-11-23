@@ -7,4 +7,19 @@
     @apply font-sans bg-slate-50 text-slate-900 antialiased;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
+
+  #main-content :is(button, a, input, select, textarea):focus-visible {
+    outline: 3px solid #065f46;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px white;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #main-content *,
+  #main-content *::before,
+  #main-content *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

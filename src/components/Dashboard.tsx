@@ -219,7 +219,7 @@ export default function Dashboard({
   const maxSessionCheckedIn = Math.max(...sessionTurnoutStats.map(s => s.count), 1);
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] bg-[radial-gradient(ellipse_100%_40%_at_50%_-10%,rgba(16,185,129,0.06),transparent)] text-slate-900 flex p-4 lg:p-6 gap-6 font-sans antialiased selection:bg-[#A3E635] selection:text-[#0F472A]">
+    <div className="min-h-screen bg-[#F8F9FA] bg-[radial-gradient(ellipse_100%_40%_at_50%_-10%,rgba(16,185,129,0.06),transparent)] text-slate-900 flex p-3 sm:p-4 lg:p-6 gap-6 font-sans antialiased selection:bg-[#A3E635] selection:text-[#0F472A]">
       {/* 1. LEFT SIDEBAR (Apple Translucent Frosted Glass with Spring Micro-Interactions) */}
       <aside className="hidden lg:flex flex-col w-60 bg-white/85 backdrop-blur-xl rounded-2xl p-5 justify-between border border-slate-200/60 shadow-apple-card ring-1 ring-black/[0.02] shrink-0">
         <div className="flex flex-col gap-7">
@@ -322,22 +322,20 @@ export default function Dashboard({
       </aside>
 
       {/* 2. MAIN DASHBOARD CONTENT */}
-      <main className="flex-1 flex flex-col gap-6 max-w-7xl mx-auto w-full">
+      <main className="min-w-0 flex-1 flex flex-col gap-6 max-w-7xl mx-auto w-full">
         {/* Top Header Bar (Apple Frosted Glass & Precision Alignment) */}
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/85 backdrop-blur-xl rounded-2xl px-6 py-3.5 border border-slate-200/60 shadow-apple-card ring-1 ring-black/[0.02] gap-4">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between bg-white/85 backdrop-blur-xl rounded-2xl px-4 sm:px-6 py-3.5 border border-slate-200/60 shadow-apple-card ring-1 ring-black/[0.02] gap-4">
           {/* Search Bar with Spring Focus Bloom */}
           <div className="relative flex-1 max-w-md group">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors group-focus-within:text-[#0F472A]" />
             <input
               type="text"
+              aria-label="Search attendee by name, phone, or participant ID"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search attendee, phone, or EQ ID..."
-              className="w-full h-10 pl-10 pr-12 bg-slate-50/80 border border-slate-200/70 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all duration-200 ease-apple-spring"
+              className="w-full min-h-11 pl-10 pr-3 bg-slate-50/80 border border-slate-200/70 rounded-xl text-base sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all duration-200 ease-apple-spring"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 bg-white border border-slate-200/80 px-1.5 py-0.5 rounded-md shadow-2xs group-focus-within:border-[#0F472A]/40 group-focus-within:text-[#0F472A] transition-colors">
-              ⌘ F
-            </span>
           </div>
 
           {/* Right Header Badges */}
@@ -390,11 +388,11 @@ export default function Dashboard({
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2.5 sm:flex-wrap">
             <button
               type="button"
               onClick={onSessionsClick}
-              className="h-10 px-4 bg-gradient-to-r from-[#0F472A] to-[#165A36] hover:brightness-110 active:scale-[0.96] text-white rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 shadow-apple-card transition-all duration-200 ease-apple-spring"
+              className="min-h-11 px-3 sm:px-4 bg-gradient-to-r from-[#0F472A] to-[#165A36] hover:brightness-110 active:scale-[0.96] text-white rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-apple-card transition-all duration-200 ease-apple-spring"
             >
               <Smartphone className="w-4 h-4 text-[#A3E635]" />
               <span>Usher Mobile Desk</span>
@@ -403,7 +401,7 @@ export default function Dashboard({
             <button
               type="button"
               onClick={onOpenEventModal}
-              className="h-10 px-3.5 bg-white/90 hover:bg-slate-50 active:scale-[0.96] text-slate-800 border border-slate-200/80 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-apple-card transition-all duration-200 ease-apple-spring"
+              className="min-h-11 px-3 sm:px-3.5 bg-white/90 hover:bg-slate-50 active:scale-[0.96] text-slate-800 border border-slate-200/80 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-apple-card transition-all duration-200 ease-apple-spring"
             >
               <Calendar className="w-4 h-4 text-[#0F472A]" />
               <span>Programme Events</span>
@@ -412,7 +410,7 @@ export default function Dashboard({
             <button
               type="button"
               onClick={onRegisterClick}
-              className="h-10 px-4 bg-[#0F472A] hover:bg-[#165A36] active:scale-[0.96] text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-xs hover:shadow-apple-float transition-all duration-200 ease-apple-spring"
+              className="min-h-11 px-3 sm:px-4 bg-[#0F472A] hover:bg-[#165A36] active:scale-[0.96] text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-xs hover:shadow-apple-float transition-all duration-200 ease-apple-spring"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>+ Register Attendee</span>
@@ -421,7 +419,7 @@ export default function Dashboard({
             <button
               type="button"
               onClick={handleExportCSV}
-              className="h-10 px-4 bg-white/90 hover:bg-slate-50 active:scale-[0.96] text-slate-800 border border-slate-200/80 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-apple-card transition-all duration-200 ease-apple-spring"
+              className="min-h-11 px-3 sm:px-4 bg-white/90 hover:bg-slate-50 active:scale-[0.96] text-slate-800 border border-slate-200/80 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-apple-card transition-all duration-200 ease-apple-spring"
             >
               <Download className="w-4 h-4 text-slate-500" />
               <span>Export Roster</span>
@@ -543,7 +541,9 @@ export default function Dashboard({
                       playHapticAudio();
                       setSelectedSessionKey(s.key);
                     }}
-                    className="flex flex-col items-center gap-2 group transition-all relative focus:outline-none"
+                    aria-label={`${s.short}: ${s.count} present`}
+                    aria-pressed={isSelected}
+                    className="flex min-h-11 min-w-11 flex-col items-center gap-2 group transition-all relative"
                   >
                     {/* Floating Apple Bounce Badge for Active Session */}
                     {isSelected && (
@@ -655,7 +655,7 @@ export default function Dashboard({
         {/* Bottom Section (Roster, Apple Watch Style Gauge, Time Tracker) */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Col 1 (5 cols): Live Attendee Roster with Apple Segmented Control */}
-          <div className="lg:col-span-5 bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring flex flex-col justify-between h-72">
+          <div className="min-w-0 lg:col-span-5 bg-white/90 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring flex flex-col justify-between min-h-72 lg:h-72">
             <div className="flex flex-col gap-2 mb-2">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
@@ -683,7 +683,7 @@ export default function Dashboard({
               </div>
 
               {/* Apple Pill Segmented Control */}
-              <div className="flex items-center gap-1 bg-slate-100/80 p-0.5 rounded-lg text-xs">
+              <div aria-label="Filter attendee roster" className="flex items-center gap-1 overflow-x-auto bg-slate-100/80 p-0.5 rounded-lg text-xs">
                 {[
                   { key: "all", label: "All" },
                   { key: "pastors", label: "Pastors" },
@@ -697,7 +697,8 @@ export default function Dashboard({
                       playHapticAudio();
                       setActiveFilterTab(tab.key as any);
                     }}
-                    className={`flex-1 py-1 rounded-md font-bold text-[11px] transition-all duration-200 ease-apple-spring text-center active:scale-95 ${
+                    aria-pressed={activeFilterTab === tab.key}
+                    className={`min-h-11 min-w-fit flex-1 px-2 py-1 rounded-md font-bold text-[11px] transition-all duration-200 ease-apple-spring text-center active:scale-95 ${
                       activeFilterTab === tab.key
                         ? "bg-[#0F472A] text-white shadow-xs"
                         : "text-slate-600 hover:text-slate-900"
@@ -716,11 +717,11 @@ export default function Dashboard({
                 return (
                   <div
                     key={a.id}
-                    className={`flex items-center justify-between p-2 rounded-xl transition-all duration-200 ease-apple-spring border border-transparent hover:border-slate-200/60 hover:bg-slate-50/80 ${
+                    className={`flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl transition-all duration-200 ease-apple-spring border border-transparent hover:border-slate-200/60 hover:bg-slate-50/80 ${
                       isJustToggled ? "ring-2 ring-emerald-400/50 bg-emerald-50/40 scale-[1.01]" : ""
                     }`}
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex min-w-0 items-center gap-2.5">
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-transform duration-200 ${
                           a.isOrdained
@@ -730,11 +731,11 @@ export default function Dashboard({
                       >
                         {a.fullName.slice(0, 2).toUpperCase()}
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-slate-900 leading-tight">
+                      <div className="flex min-w-0 flex-col">
+                        <span className="break-words text-xs font-bold text-slate-900 leading-tight">
                           {a.fullName}
                         </span>
-                        <span className="text-[11px] text-slate-500 font-medium">
+                        <span className="break-words text-[11px] text-slate-500 font-medium">
                           {a.roleOffice} · {a.churchName}
                         </span>
                       </div>
@@ -747,7 +748,8 @@ export default function Dashboard({
                       <button
                         type="button"
                         onClick={() => toggleCheckIn(a.id)}
-                        className={`text-xs font-bold px-2.5 py-1 rounded-full active:scale-90 transition-all duration-150 ease-apple-spring ${
+                        aria-label={`${a.checkedIn ? "Remove check-in for" : "Check in"} ${a.fullName}`}
+                        className={`min-h-11 text-xs font-bold px-3 py-1 rounded-full active:scale-90 transition-all duration-150 ease-apple-spring ${
                           a.checkedIn
                             ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200/80 shadow-2xs"
                             : "bg-amber-100 text-amber-800 hover:bg-amber-200/80 shadow-2xs"
@@ -830,7 +832,7 @@ export default function Dashboard({
             <button
               type="button"
               onClick={onSessionsClick}
-              className="w-full h-8 bg-white/15 hover:bg-white/25 active:scale-[0.98] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-150 z-10 border border-white/15 shadow-2xs"
+            className="w-full min-h-11 bg-white/15 hover:bg-white/25 active:scale-[0.98] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all duration-150 z-10 border border-white/15 shadow-2xs"
             >
               <span>Open Usher Mobile Desk →</span>
             </button>
@@ -838,7 +840,7 @@ export default function Dashboard({
         </section>
 
         {/* Door Fast Check-in Command Bar with Apple Bounce Feedback */}
-        <section className="bg-white/90 backdrop-blur-md rounded-2xl p-4 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring flex flex-col sm:flex-row items-center justify-between gap-4">
+        <section className="bg-white/90 backdrop-blur-md rounded-2xl p-4 border border-slate-200/60 shadow-apple-card hover:shadow-apple-card-hover transition-all duration-300 ease-apple-spring flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#0F472A] border border-emerald-200/60 flex items-center justify-center shrink-0 shadow-2xs">
               <QrCode className="w-5 h-5 text-[#0F472A]" />
@@ -849,26 +851,28 @@ export default function Dashboard({
             </div>
           </div>
 
-          <form onSubmit={handleFastScanSubmit} className="flex items-center gap-2 w-full sm:w-auto flex-1 max-w-md">
+          <form onSubmit={handleFastScanSubmit} className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:items-center flex-1 max-w-md">
             <input
               type="text"
+              aria-label="Participant ID or phone number for fast check-in"
               value={fastScanId}
               onChange={(e) => setFastScanId(e.target.value)}
               placeholder="e.g. EQ-29402 or phone..."
-              className="w-full h-9 px-3 bg-slate-50/80 border border-slate-200/80 rounded-xl text-xs font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all duration-150 ease-apple-spring"
+              className="col-span-2 w-full min-h-11 px-3 bg-slate-50/80 border border-slate-200/80 rounded-xl text-base sm:col-span-1 sm:text-sm font-mono text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-3 focus:ring-[#0F472A]/15 focus:border-[#0F472A] focus:bg-white transition-all duration-150 ease-apple-spring"
             />
             <button
               type="button"
               onClick={() => setIsCameraScannerOpen(true)}
-              className="h-9 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 shrink-0"
+              aria-label="Open camera QR scanner"
+              className="min-h-11 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 shrink-0"
               title="Open Camera QR Scanner"
             >
               <Camera className="w-3.5 h-3.5 text-[#0F472A]" />
-              <span className="hidden sm:inline">Camera</span>
+              <span>Camera</span>
             </button>
             <button
               type="submit"
-              className="h-9 px-4 bg-[#0F472A] hover:bg-[#165A36] active:scale-[0.96] text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-all duration-150 ease-apple-spring shadow-xs"
+              className="min-h-11 px-4 bg-[#0F472A] hover:bg-[#165A36] active:scale-[0.96] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0 transition-all duration-150 ease-apple-spring shadow-xs"
             >
               <Check className="w-3.5 h-3.5" />
               <span>Verify</span>
@@ -876,7 +880,7 @@ export default function Dashboard({
           </form>
 
           {scanFeedback && (
-            <div
+            <div role="status"
               className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 animate-in slide-in-from-top-1 zoom-in-95 duration-200 ease-apple-bounce ${
                 scanFeedback.type === "success"
                   ? "bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-xs"
